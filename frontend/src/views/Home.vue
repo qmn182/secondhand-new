@@ -41,7 +41,7 @@
           @click="viewDetail(product.id)"
         >
           <div class="product-img">
-            <img :src="product.imageUrl || '/default.png'" alt="商品图片" />
+            <img :src="product.imageUrl || '/placeholder.png'" alt="商品图片" />
           </div>
           <div class="product-info">
             <h3>{{ product.name }}</h3>
@@ -140,6 +140,7 @@ onMounted(() => {
   loadProducts()
 })
 </script>
+
 
 <style scoped>
 .home-wrapper {

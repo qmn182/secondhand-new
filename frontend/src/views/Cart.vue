@@ -1,7 +1,6 @@
 <template>
   <div class="cart-wrapper">
     <div class="cart-card">
-      <!-- 居中标题 -->
       <div class="page-header">
         <div class="page-title">购物车</div>
       </div>
@@ -16,7 +15,7 @@
         <div class="cart-items">
           <div v-for="item in cartItems" :key="item.id" class="cart-item">
             <div class="item-img">
-              <img :src="item.productImage || '/default.png'" />
+              <img :src="item.productImage || '/placeholder.png'" />
             </div>
             <div class="item-info">
               <h4>{{ item.productName }}</h4>
@@ -41,7 +40,6 @@
         </div>
       </div>
 
-      <!-- 消息提示 -->
       <transition name="fade">
         <div v-if="message" class="message" :class="messageType">
           {{ message }}
@@ -147,6 +145,7 @@ onMounted(() => {
   fetchCart()
 })
 </script>
+
 
 <style scoped>
 /* ========== 与首页完全统一的风格 ========== */

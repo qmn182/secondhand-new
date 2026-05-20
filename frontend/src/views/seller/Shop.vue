@@ -1,7 +1,6 @@
 <template>
   <div class="store-wrapper">
     <div class="store-card">
-      <!-- 店铺头部信息 -->
       <div class="store-header" v-if="shopInfo">
         <div class="shop-avatar">🏪</div>
         <div class="shop-details">
@@ -17,7 +16,6 @@
       <div v-else-if="loadingInfo" class="loading">加载店铺信息...</div>
       <div v-else class="error">商家不存在</div>
 
-      <!-- 商品列表排序栏 -->
       <div class="sort-bar" v-if="shopInfo">
         <span>排序：</span>
         <button :class="{ active: sortBy === 'time_desc' }" @click="changeSort('time_desc')">最新</button>
@@ -26,11 +24,10 @@
         <button :class="{ active: sortBy === 'sold_desc' }" @click="changeSort('sold_desc')">销量最高</button>
       </div>
 
-      <!-- 商品网格 -->
       <div class="product-grid" v-if="shopInfo">
         <div v-for="product in productList" :key="product.id" class="product-card" @click="goToDetail(product.id)">
           <div class="product-img">
-            <img :src="product.imageUrl || '/default.png'" alt="商品图片" />
+            <img :src="product.imageUrl || '/placeholder.png'" alt="商品图片" />
           </div>
           <div class="product-info">
             <h3>{{ product.name }}</h3>
@@ -44,7 +41,6 @@
       <div v-if="loadingProducts" class="loading">加载商品中...</div>
       <div v-else-if="productList.length === 0 && shopInfo" class="empty">暂无商品</div>
 
-      <!-- 分页 -->
       <div class="pagination" v-if="totalPages > 1">
         <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)">上一页</button>
         <span>第 {{ currentPage }} / {{ totalPages }} 页</span>

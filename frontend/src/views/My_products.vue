@@ -1,12 +1,10 @@
 <template>
   <div class="my-products-wrapper">
     <div class="my-products-card">
-      <!-- 头部标题（与首页风格一致） -->
       <div class="page-header">
         <div class="page-title">我的商品</div>
       </div>
 
-      <!-- 标签页 -->
       <div class="tabs">
         <button 
           :class="{ active: activeTab === 'selling' }" 
@@ -28,7 +26,6 @@
         </button>
       </div>
 
-      <!-- 商品列表 -->
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div> 加载中...
       </div>
@@ -96,7 +93,7 @@ const getProductImage = (product) => {
       if (arr.length) return arr[0]
     } catch (e) {}
   }
-  return '/default.png'
+  return '/placeholder.png'   // 修改默认图片路径
 }
 
 const fetchProducts = async (status) => {
@@ -170,6 +167,7 @@ onMounted(() => {
   fetchProducts(activeTab.value)
 })
 </script>
+
 
 <style scoped>
 /* 与首页完全统一的风格 */

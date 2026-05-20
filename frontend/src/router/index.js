@@ -26,6 +26,21 @@ const router = createRouter({
       path: '/shop/:sellerId',
       name: 'shop',
       component: () => import('@/views/seller/Shop.vue')   // 根据实际文件名和路径调整
+    },
+    {
+      path: '/product-evaluations/:productId',
+      name: 'product-evaluations',
+      component: () => import('@/views/product/ProductEvaluations.vue')
+    },
+    {
+      path: '/user/buyer-evaluations',
+      name: 'buyer-evaluations',
+      component: () => import('@/views/buyer/BuyerEvaluations.vue')
+    },
+    {
+      path: '/product/:id',
+      ame: 'product-detail',
+      component: () => import('@/views/product/ProductDetail.vue')
     }
     // 商品详情页（若有则取消注释）
     // { path: '/product/:id', name: 'product-detail', component: () => import('@/views/ProductDetail.vue') }
