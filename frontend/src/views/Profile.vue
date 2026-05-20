@@ -208,7 +208,11 @@ const goApply = () => {
 
 // 跳转到商家管理页面（可自定义）
 const goToShop = () => {
-  router.push(`/shop/${userInfo.id}/manage`)  // 或者你的商家后台路由
+  if (userInfo.id && userInfo.role === 2) {
+    router.push(`/shop/${userInfo.id}`)
+  } else {
+    showMessage('无法获取店铺信息或您不是商家', 'error')
+  }
 }
 
 onMounted(() => {

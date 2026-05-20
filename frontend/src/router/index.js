@@ -21,6 +21,11 @@ const router = createRouter({
       path: '/admin/users',
       name: 'user-management',
       component: () => import('@/views/admin/Users.vue')
+    },
+    {
+      path: '/shop/:sellerId',
+      name: 'shop',
+      component: () => import('@/views/seller/Shop.vue')   // 根据实际文件名和路径调整
     }
     // 商品详情页（若有则取消注释）
     // { path: '/product/:id', name: 'product-detail', component: () => import('@/views/ProductDetail.vue') }
