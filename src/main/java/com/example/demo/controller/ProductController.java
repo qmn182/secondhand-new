@@ -103,10 +103,6 @@ public class ProductController {
 
     /**
      * 商家查看自己的商品列表
-     * ===== 修改开始 =====
-     * 原方法调用 productService.getSellerProducts，现在改为显式使用 LambdaQueryWrapper，
-     * 根据前端传入的 status 参数（1=出售中，2=下架，3=已售罄）精确查询，解决已售罄商品不显示的问题。
-     * ===== 修改结束 =====
      */
     @GetMapping("/my-list")
     public Result myProducts(@RequestParam(defaultValue = "1") Integer page,
@@ -118,21 +114,18 @@ public class ProductController {
             return Result.fail("请登录商家账号");
         }
         Page<Product> pageObj = new Page<>(page, size);
-        // ===== 修改开始：使用 LambdaQueryWrapper 自行构建查询 =====
         LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Product::getUserId, user.getId());
         if (status != null) {
-            wrapper.eq(Product::getStatus, status);   // status 可为 1,2,3
+            wrapper.eq(Product::getStatus, status);
         }
         wrapper.orderByDesc(Product::getCreateTime);
         Page<Product> productPage = productService.page(pageObj, wrapper);
         return Result.success(productPage);
-        // ===== 修改结束 =====
     }
 
     /**
      * 首页商品列表（公开接口）
-     * 已修改：只返回 status=1 的上架商品
      */
     @GetMapping("/list")
     public Result list(@RequestParam(defaultValue = "1") Integer page,
@@ -142,14 +135,13 @@ public class ProductController {
                        @RequestParam(required = false) String sort) {
         Page<Product> pageObj = new Page<>(page, size);
         LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Product::getStatus, 1);   // 只显示上架商品
+        wrapper.eq(Product::getStatus, 1);
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.like(Product::getName, keyword);
         }
         if (category != null && !category.isEmpty()) {
             wrapper.eq(Product::getCategory, category);
         }
-        // 排序处理
         if ("price_asc".equals(sort)) {
             wrapper.orderByAsc(Product::getPrice);
         } else if ("price_desc".equals(sort)) {
@@ -169,8 +161,11 @@ public class ProductController {
     @GetMapping("/detail/{id}")
     public Result detail(@PathVariable Long id) {
         Product product = productService.getById(id);
-        if (product == null || product.getStatus() != 1) {
-            return Result.fail("商品不存在或已下架");
+        if (product == null) {
+            return Result.fail("商品不存在");
+        }
+        if (product.getStatus() == 2) {
+            return Result.fail("商品已下架，无法查看");
         }
         return Result.success(product);
     }
@@ -195,14 +190,21 @@ public class ProductController {
     // 编辑商品
     @PutMapping("/edit/{id}")
     public Result editProduct(@PathVariable Long id, @RequestBody Product product, HttpSession session) {
+        // ===== 修改开始：优化权限校验逻辑 =====
         User user = (User) session.getAttribute("user");
-        if (user == null || user.getRole() != 2) {
-            return Result.fail("无权限");
+        if (user == null) {
+            return Result.fail("请先登录");
         }
         Product existing = productService.getById(id);
-        if (existing == null || !existing.getUserId().equals(user.getId())) {
-            return Result.fail("商品不存在或无权限");
+        if (existing == null) {
+            return Result.fail("商品不存在");
         }
+        // 权限检查：管理员可编辑任何商品，商家只能编辑自己的商品
+        if (user.getRole() != 3 && (user.getRole() != 2 || !existing.getUserId().equals(user.getId()))) {
+            return Result.fail("无权限");
+        }
+        // ===== 修改结束 =====
+
         // 允许修改的字段
         if (product.getName() != null) existing.setName(product.getName());
         if (product.getCategory() != null) existing.setCategory(product.getCategory());
@@ -229,7 +231,6 @@ public class ProductController {
         if (product == null) {
             return Result.fail("商品不存在");
         }
-        // 商家或管理员可删除
         if (user.getRole() != 3 && !product.getUserId().equals(user.getId())) {
             return Result.fail("无权限");
         }

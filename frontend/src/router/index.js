@@ -41,6 +41,11 @@ const router = createRouter({
       path: '/product/:id',
       ame: 'product-detail',
       component: () => import('@/views/product/ProductDetail.vue')
+    },
+    {
+      path: '/product/edit/:id',
+      name: 'edit-product',
+      component: () => import('@/views/product/EditProduct.vue')
     }
     // 商品详情页（若有则取消注释）
     // { path: '/product/:id', name: 'product-detail', component: () => import('@/views/ProductDetail.vue') }
