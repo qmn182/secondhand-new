@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"></meta>
+    <title>商家申请审核</title>
+    <style>
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        .btn { padding: 4px 10px; margin: 2px; cursor: pointer; }
+        .btn-pass { background: #4caf50; color: white; }
+        .btn-reject { background: #f44336; color: white; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>商家申请列表</h2>
+    <table id="applications">
+        <thead>
+            <tr><th>ID</th><th>用户名</th><th>店铺名称</th><th>营业执照</th><th>身份证</th><th>操作</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+<script>
+    async function loadApplications() {
+        const resp = await fetch('/user/admin/merchantApplications', { credentials: 'include' });
+        const result = await resp.json();
+        if (result.code === 200) {
+            renderTable(result.data);
+        } else {
+            alert(result.msg);
+        }
+    }
+    function renderTable(users) {
+        const tbody = document.querySelector('#applications tbody');
+        tbody.innerHTML = users.map(user => `
+            <tr>
+                <td>${user.id}</td>
+                <td>${user.username}</td>
+                <td>${user.shopName}</td>
+                <td><a href="${user.businessLicense}" target="_blank">查看图片</a></td>
+                <td><a href="${user.idCardImage}" target="_blank">查看图片</a></td>
+                <td>
+                    <button class="btn btn-pass" data-id="${user.id}" data-approved="true">通过</button>
+                    <button class="btn btn-reject" data-id="${user.id}" data-approved="false">拒绝</button>
+                </td>
+            </tr>
+        `).join('');
+        // 绑定审核事件
+        document.querySelectorAll('.btn-pass, .btn-reject').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const userId = btn.dataset.id;
+                const approved = btn.dataset.approved === 'true';
+                const resp = await fetch(`/user/admin/auditMerchant?userId=${userId}&approved=${approved}`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                const result = await resp.json();
+                alert(result.msg);
+                loadApplications(); // 刷新列表
+            });
+        });
+    }
+    loadApplications();
+</script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <!-- 新增以下这一行 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的商品 - 商家中心</title>
+    <style>
+        body { font-family: Arial; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background: #f2f2f2; }
+        img { width: 60px; height: 60px; object-fit: cover; }
+        .btn { padding: 4px 10px; border: none; border-radius: 4px; cursor: pointer; margin: 2px; }
+        .btn-offline { background: #ff9800; color: white; }
+        .btn-online { background: #4caf50; color: white; }
+        .pagination { margin-top: 20px; text-align: center; }
+        .pagination button { margin: 0 5px; padding: 6px 12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>我的商品</h2>
+    <div>
+        <label>状态筛选:</label>
+        <select id="statusFilter" >
+            <option value="">全部</option>
+            <option value="1">上架</option>
+            <option value="2">下架</option>
+        </select>
+        <button id="filterBtn">筛选</button>
+        <button id="newProductBtn">发布新商品</button>
+    </div>
+    <table id="productTable">
+        <thead>
+            <tr><th>ID</th><th>图片</th><th>商品名称</th><th>售价</th><th>库存</th><th>销量</th><th>状态</th><th>操作</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <div id="pagination" class="pagination"></div>
+</div>
+
+<script>
+    let currentPage = 1;
+    let pageSize = 10;
+    let currentStatus = '';
+
+    async function loadProducts() {
+        let url = `/product/my-list?page=${currentPage}&size=${pageSize}`;
+        if (currentStatus) url += `&status=${currentStatus}`;
+        const resp = await fetch(url, { credentials: 'include' });
+        const result = await resp.json();
+        if (result.code === 200) {
+            const data = result.data;
+            renderTable(data.records || []);
+            renderPagination(data.total, data.pages);
+        } else {
+            alert(result.msg);
+        }
+    }
+
+    function renderTable(products) {
+        const tbody = document.querySelector('#productTable tbody');
+        if (!products.length) {
+            tbody.innerHTML = '<tr><td colspan="8">暂无商品</td></tr>';
+            return;
+        }
+        tbody.innerHTML = products.map(p => `
+            <tr>
+                <td>${p.id}</td>
+                <td><img src="${p.imageUrl || '/default.png'}" onerror="this.src='/default.png'"></td>
+                <td>${p.name}</td>
+                <td>¥${p.price}</td>
+                <td>${p.stock}</td>
+                <td>${p.sold}</td>
+                <td>${p.status === 1 ? '上架' : '下架'}</td>
+                <td>
+                    ${p.status === 1 ? `<button class="btn btn-offline" data-id="${p.id}">下架</button>` : `<button class="btn btn-online" data-id="${p.id}">上架</button>`}
+                </td>
+            </tr>
+        `).join('');
+
+        document.querySelectorAll('.btn-offline').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = btn.getAttribute('data-id');
+                await fetch(`/product/offline/${id}`, { method: 'PUT', credentials: 'include' });
+                loadProducts();
+            });
+        });
+        document.querySelectorAll('.btn-online').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = btn.getAttribute('data-id');
+                await fetch(`/product/online/${id}`, { method: 'PUT', credentials: 'include' });
+                loadProducts();
+            });
+        });
+    }
+
+    function renderPagination(total, pages) {
+        const div = document.getElementById('pagination');
+        if (pages <= 1) { div.innerHTML = ''; return; }
+        let html = '';
+        for (let i = 1; i <= pages; i++) {
+            html += `<button class="page-btn" data-page="${i}">${i}</button>`;
+        }
+        div.innerHTML = html;
+        document.querySelectorAll('.page-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentPage = parseInt(btn.dataset.page);
+                loadProducts();
+            });
+        });
+    }
+
+    document.getElementById('filterBtn').addEventListener('click', () => {
+        currentStatus = document.getElementById('statusFilter').value;
+        currentPage = 1;
+        loadProducts();
+    });
+    document.getElementById('newProductBtn').addEventListener('click', () => {
+        window.location.href = '/publish.html';
+    });
+
+    loadProducts();
+</script>
+</body>
+</html>

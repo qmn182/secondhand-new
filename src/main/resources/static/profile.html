@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的个人中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #1890ff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .section {
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .info-row {
+            display: flex;
+            padding: 10px 0;
+        }
+        .info-label {
+            width: 120px;
+            font-weight: 600;
+            color: #333;
+        }
+        .info-value {
+            flex: 1;
+            color: #666;
+        }
+        .wallet-balance {
+            font-size: 28px;
+            color: #ff6b6b;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .btn {
+            display: inline-block;
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            margin-right: 12px;
+        }
+        .btn-danger {
+            background: #ff6b6b;
+        }
+        .btn-warning {
+            background: #ff9800;
+        }
+        .btn-sm {
+            padding: 6px 16px;
+            font-size: 13px;
+        }
+        .action-bar {
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #f0f0f0;
+        }
+        .message {
+            margin: 10px 20px;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .error {
+            background: #fff2f0;
+            color: #ff4d4f;
+        }
+        .success {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+        hr {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">我的个人中心</div>
+    
+    <!-- 用户基本信息 -->
+    <div class="section">
+        <div class="section-title">
+            基本信息
+            <button id="editProfileBtn" class="btn btn-sm" style="background:#1890ff; margin-left:10px;">编辑资料</button>
+            <button id="saveProfileBtn" class="btn btn-sm" style="background:#52c41a; display:none;">保存修改</button>
+        </div>
+        <div id="profileDisplay">
+            <div class="info-row"><div class="info-label">用户名：</div><div class="info-value" id="username">-</div></div>
+            <div class="info-row"><div class="info-label">手机号：</div><div class="info-value" id="phone">-</div></div>
+            <div class="info-row"><div class="info-label">邮箱：</div><div class="info-value" id="email">-</div></div>
+            <div class="info-row"><div class="info-label">城市：</div><div class="info-value" id="city">-</div></div>
+            <div class="info-row"><div class="info-label">性别：</div><div class="info-value" id="gender">-</div></div>
+            <div class="info-row"><div class="info-label">银行账号：</div><div class="info-value" id="bankAccount">-</div></div>
+        </div>
+        <div id="profileEdit" style="display:none;">
+            <div class="info-row"><div class="info-label">手机号：</div><input type="text" id="editPhone" placeholder="手机号"></div>
+            <div class="info-row"><div class="info-label">邮箱：</div><input type="email" id="editEmail" placeholder="邮箱"></div>
+            <div class="info-row"><div class="info-label">城市：</div><input type="text" id="editCity" placeholder="城市"></div>
+            <div class="info-row"><div class="info-label">性别：</div>
+                <select id="editGender">
+                    <option value="">未设置</option>
+                    <option value="1">男</option>
+                    <option value="2">女</option>
+                </select>
+            </div>
+            <div class="info-row"><div class="info-label">银行账号：</div><input type="text" id="editBankAccount" placeholder="银行卡号"></div>
+        </div>
+    </div>
+
+    <!-- 钱包管理 -->
+    <div class="section">
+        <div class="section-title">我的钱包</div>
+        <div class="wallet-balance" id="walletBalance">加载中...</div>
+        <div class="form-group">
+            <label>充值金额（元）</label>
+            <input type="number" id="rechargeAmount" step="0.01" placeholder="输入金额">
+            <label>银行卡密码</label>
+            <input type="password" id="rechargePassword" placeholder="默认0000">
+            <button id="rechargeBtn" class="btn btn-sm" style="margin-top:10px;">充值</button>
+        </div>
+        <div class="form-group">
+            <label>提现金额（元）</label>
+            <input type="number" id="withdrawAmount" step="0.01" placeholder="输入金额">
+            <label>银行卡密码</label>
+            <input type="password" id="withdrawPassword" placeholder="默认0000">
+            <button id="withdrawBtn" class="btn btn-sm btn-danger" style="margin-top:10px;">提现</button>
+        </div>
+        <div class="info-row">
+            <div class="info-label">积分：</div>
+            <div class="info-value" id="points">-</div>
+        </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="action-bar">
+        <a href="/apply_merchant.html" id="applyMerchantBtn" class="btn btn-warning" style="display:none;">申请成为商家</a>
+        <a href="/my_products.html" id="sellerCenter" class="btn btn-warning" style="display:none;">商家中心</a>
+        <button id="logoutBtn" class="btn btn-danger">退出登录</button>
+        <a href="/" class="btn">返回首页</a>
+    </div>
+    <div id="message" class="message"></div>
+</div>
+
+<script>
+    let currentUserData = null;
+
+    async function loadUserInfo() {
+        try {
+            const resp = await fetch('/user/current', { credentials: 'include' });
+            const result = await resp.json();
+            if (result.code === 200 && result.data) {
+                currentUserData = result.data;
+                const user = result.data;
+                // 显示区
+                document.getElementById('username').innerText = user.username || '-';
+                document.getElementById('phone').innerText = user.phone || '-';
+                document.getElementById('email').innerText = user.email || '-';
+                document.getElementById('city').innerText = user.city || '-';
+                let genderText = '';
+                if (user.gender === 1) genderText = '男';
+                else if (user.gender === 2) genderText = '女';
+                else genderText = '-';
+                document.getElementById('gender').innerText = genderText;
+                document.getElementById('bankAccount').innerText = user.bankAccount || '-';
+                document.getElementById('points').innerText = user.points !== undefined ? user.points : '-';
+                // 编辑区填充
+                document.getElementById('editPhone').value = user.phone || '';
+                document.getElementById('editEmail').value = user.email || '';
+                document.getElementById('editCity').value = user.city || '';
+                document.getElementById('editGender').value = user.gender || '';
+                document.getElementById('editBankAccount').value = user.bankAccount || '';
+
+                // 申请商家按钮：仅普通用户（role=1）且未申请或申请被拒
+                const applyBtn = document.getElementById('applyMerchantBtn');
+                if (applyBtn) {
+                    if (user.role === 1 && (user.merchantStatus !== 1 && user.merchantStatus !== 2)) {
+                        applyBtn.style.display = 'inline-block';
+                    } else {
+                        applyBtn.style.display = 'none';
+                    }
+                }
+                // 商家中心按钮：仅商家可见（role=2）
+                const sellerCenter = document.getElementById('sellerCenter');
+                if (sellerCenter) {
+                    sellerCenter.style.display = (user.role === 2) ? 'inline-block' : 'none';
+                }
+                // 加载余额
+                loadBalance();
+            } else {
+                showMessage('请先登录', 'error');
+                setTimeout(() => window.location.href = '/login.html', 1500);
+            }
+        } catch (err) {
+            showMessage('网络错误', 'error');
+        }
+    }
+
+    async function loadBalance() {
+        try {
+            const resp = await fetch('/user/wallet/balance', { credentials: 'include' });
+            const result = await resp.json();
+            if (result.code === 200) {
+                document.getElementById('walletBalance').innerText = '¥' + result.data;
+            } else {
+                document.getElementById('walletBalance').innerText = '获取失败';
+            }
+        } catch (err) {
+            document.getElementById('walletBalance').innerText = '网络错误';
+        }
+    }
+
+    async function recharge() {
+        const amount = document.getElementById('rechargeAmount').value;
+        const password = document.getElementById('rechargePassword').value;
+        if (!amount || parseFloat(amount) <= 0) {
+            showMessage('请输入有效金额', 'error');
+            return;
+        }
+        if (!password) {
+            showMessage('请输入银行卡密码', 'error');
+            return;
+        }
+        try {
+            const resp = await fetch(`/user/wallet/recharge?amount=${amount}&password=${password}`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            const result = await resp.json();
+            if (result.code === 200) {
+                showMessage(result.msg, 'success');
+                loadBalance();
+                document.getElementById('rechargeAmount').value = '';
+                document.getElementById('rechargePassword').value = '';
+            } else {
+                showMessage(result.msg, 'error');
+            }
+        } catch (err) {
+            showMessage('网络错误', 'error');
+        }
+    }
+
+    async function withdraw() {
+        const amount = document.getElementById('withdrawAmount').value;
+        const password = document.getElementById('withdrawPassword').value;
+        if (!amount || parseFloat(amount) <= 0) {
+            showMessage('请输入有效金额', 'error');
+            return;
+        }
+        if (!password) {
+            showMessage('请输入银行卡密码', 'error');
+            return;
+        }
+        try {
+            const resp = await fetch(`/user/wallet/withdraw?amount=${amount}&password=${password}`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            const result = await resp.json();
+            if (result.code === 200) {
+                showMessage(result.msg, 'success');
+                loadBalance();
+                document.getElementById('withdrawAmount').value = '';
+                document.getElementById('withdrawPassword').value = '';
+            } else {
+                showMessage(result.msg, 'error');
+            }
+        } catch (err) {
+            showMessage('网络错误', 'error');
+        }
+    }
+
+    // 编辑资料
+    document.getElementById('editProfileBtn').addEventListener('click', () => {
+        document.getElementById('profileDisplay').style.display = 'none';
+        document.getElementById('profileEdit').style.display = 'block';
+        document.getElementById('editProfileBtn').style.display = 'none';
+        document.getElementById('saveProfileBtn').style.display = 'inline-block';
+    });
+
+    // 保存修改
+    document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+        const updatedUser = {
+            phone: document.getElementById('editPhone').value,
+            email: document.getElementById('editEmail').value,
+            city: document.getElementById('editCity').value,
+            gender: document.getElementById('editGender').value ? parseInt(document.getElementById('editGender').value) : null,
+            bankAccount: document.getElementById('editBankAccount').value
+        };
+        try {
+            const resp = await fetch('/user/profile/update', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(updatedUser)
+            });
+            const result = await resp.json();
+            if (result.code === 200) {
+                showMessage('保存成功', 'success');
+                // 刷新用户信息
+                await loadUserInfo();
+                // 切换回显示模式
+                document.getElementById('profileDisplay').style.display = 'block';
+                document.getElementById('profileEdit').style.display = 'none';
+                document.getElementById('editProfileBtn').style.display = 'inline-block';
+                document.getElementById('saveProfileBtn').style.display = 'none';
+            } else {
+                showMessage(result.msg || '保存失败', 'error');
+            }
+        } catch (err) {
+            showMessage('网络错误', 'error');
+        }
+    });
+
+    async function logout() {
+        await fetch('/user/logout', { method: 'POST', credentials: 'include' });
+        window.location.href = '/login.html';
+    }
+
+    function showMessage(msg, type) {
+        const msgDiv = document.getElementById('message');
+        msgDiv.textContent = msg;
+        msgDiv.className = `message ${type}`;
+        setTimeout(() => {
+            msgDiv.textContent = '';
+            msgDiv.className = 'message';
+        }, 3000);
+    }
+
+    // 绑定事件
+    document.getElementById('rechargeBtn').addEventListener('click', recharge);
+    document.getElementById('withdrawBtn').addEventListener('click', withdraw);
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+    
+    // 页面加载
+    loadUserInfo();
+</script>
+</body>
+</html>

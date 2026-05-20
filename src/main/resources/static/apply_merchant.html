@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"></meta>
+    <title>申请成为商家</title>
+    <style>
+        body { font-family: Arial; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #1890ff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+        .message { margin-top: 15px; padding: 10px; border-radius: 4px; text-align: center; }
+        .error { background: #ffebee; color: #f44336; }
+        .success { background: #e8f5e9; color: #4caf50; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>申请成为商家</h2>
+    <div class="form-group">
+        <label>店铺名称 *</label>
+        <input type="text" id="shopName" placeholder="请输入店铺名称">
+    </div>
+    <div class="form-group">
+        <label>营业执照（图片）*</label>
+        <input type="file" id="license" accept="image/*">
+    </div>
+    <div class="form-group">
+        <label>身份证照片（图片）*</label>
+        <input type="file" id="idCard" accept="image/*">
+    </div>
+    <button id="submitBtn">提交申请</button>
+    <div id="message" class="message"></div>
+</div>
+
+<script>
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+        const shopName = document.getElementById('shopName').value.trim();
+        const licenseFile = document.getElementById('license').files[0];
+        const idCardFile = document.getElementById('idCard').files[0];
+        if (!shopName || !licenseFile || !idCardFile) {
+            showMessage('请完整填写信息', 'error');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('shopName', shopName);
+        formData.append('license', licenseFile);
+        formData.append('idCard', idCardFile);
+        try {
+            const resp = await fetch('/user/applyMerchant', {
+                method: 'POST',
+                body: formData,
+                credentials: 'include'
+            });
+            const result = await resp.json();
+            if (result.code === 200) {
+                showMessage(result.msg, 'success');
+                setTimeout(() => window.location.href = '/profile.html', 1500);
+            } else {
+                showMessage(result.msg || '申请失败', 'error');
+            }
+        } catch (err) {
+            showMessage('网络错误', 'error');
+        }
+    });
+
+    function showMessage(msg, type) {
+        const div = document.getElementById('message');
+        div.textContent = msg;
+        div.className = `message ${type}`;
+        setTimeout(() => div.className = 'message', 3000);
+    }
+</script>
+</body>
+</html>

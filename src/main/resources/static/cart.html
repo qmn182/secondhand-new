@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的购物车</title>
+    <style>
+        body { font-family: Arial; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        img { width: 60px; height: 60px; object-fit: cover; }
+        .btn { padding: 6px 12px; cursor: pointer; }
+        .checkout { background: #ff6b6b; color: white; border: none; padding: 10px 20px; margin-top: 20px; font-size: 16px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>我的购物车</h2>
+    <table id="cartTable">
+        <thead>
+            <tr><th>图片</th><th>商品名称</th><th>单价</th><th>数量</th><th>小计</th><th>操作</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <div style="text-align: right; margin-top: 20px;">
+        <strong>总计：¥<span id="totalAmount">0</span></strong>
+        <button id="checkoutBtn" class="checkout">去结算</button>
+    </div>
+</div>
+<script>
+    async function loadCart() {
+        const resp = await fetch('/cart/list', { credentials: 'include' });
+        const result = await resp.json();
+        if (result.code === 200) {
+            renderCart(result.data);
+        } else {
+            alert(result.msg);
+        }
+    }
+
+    function renderCart(carts) {
+        const tbody = document.querySelector('#cartTable tbody');
+        if (!carts.length) {
+            tbody.innerHTML = '<tr><td colspan="6">购物车为空</td></tr>';
+            document.getElementById('totalAmount').innerText = '0';
+            return;
+        }
+        let total = 0;
+        tbody.innerHTML = carts.map(cart => {
+            const subtotal = cart.productPrice * cart.quantity;
+            total += subtotal;
+            return `
+                <tr data-id="${cart.id}">
+                    <td><img src="${cart.productImage || '/default.png'}" onerror="this.src='/default.png'" width="60"></td>
+                    <td>${cart.productName}</td>
+                    <td>¥${cart.productPrice}</td>
+                    <td>
+                        <input type="number" value="${cart.quantity}" min="1" class="qty" data-id="${cart.id}" style="width:60px;">
+                    </td>
+                    <td class="subtotal">¥${subtotal.toFixed(2)}</td>
+                    <td><button class="remove-btn" data-id="${cart.id}">删除</button></td>
+                </tr>
+            `;
+        }).join('');
+        document.getElementById('totalAmount').innerText = total.toFixed(2);
+
+        // 数量修改事件
+        document.querySelectorAll('.qty').forEach(input => {
+            input.addEventListener('change', async (e) => {
+                const cartId = input.dataset.id;
+                const newQty = parseInt(input.value);
+                if (isNaN(newQty) || newQty < 1) return;
+                await fetch(`/cart/updateQuantity?cartId=${cartId}&quantity=${newQty}`, { method: 'PUT', credentials: 'include' });
+                loadCart();
+            });
+        });
+        // 删除事件
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const cartId = btn.dataset.id;
+                await fetch(`/cart/remove/${cartId}`, { method: 'DELETE', credentials: 'include' });
+                loadCart();
+            });
+        });
+    }
+
+    document.getElementById('checkoutBtn').addEventListener('click', async () => {
+        const resp = await fetch('/order/createFromCart', { method: 'POST', credentials: 'include' });
+        const result = await resp.json();
+        if (result.code === 200) {
+            alert(`下单成功！订单号：${result.data}`);
+            window.location.href = '/';  // 跳转到首页
+        } else {
+            alert(result.msg);
+        }
+    });
+
+    loadCart();
+</script>
+</body>
+</html>
