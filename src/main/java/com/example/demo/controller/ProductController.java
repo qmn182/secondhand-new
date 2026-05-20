@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo.common.Result;
 import com.example.demo.entity.Product;
@@ -102,6 +103,10 @@ public class ProductController {
 
     /**
      * 商家查看自己的商品列表
+     * ===== 修改开始 =====
+     * 原方法调用 productService.getSellerProducts，现在改为显式使用 LambdaQueryWrapper，
+     * 根据前端传入的 status 参数（1=出售中，2=下架，3=已售罄）精确查询，解决已售罄商品不显示的问题。
+     * ===== 修改结束 =====
      */
     @GetMapping("/my-list")
     public Result myProducts(@RequestParam(defaultValue = "1") Integer page,
@@ -113,12 +118,21 @@ public class ProductController {
             return Result.fail("请登录商家账号");
         }
         Page<Product> pageObj = new Page<>(page, size);
-        Page<Product> result = productService.getSellerProducts(pageObj, user.getId(), status);
-        return Result.success(result);
+        // ===== 修改开始：使用 LambdaQueryWrapper 自行构建查询 =====
+        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Product::getUserId, user.getId());
+        if (status != null) {
+            wrapper.eq(Product::getStatus, status);   // status 可为 1,2,3
+        }
+        wrapper.orderByDesc(Product::getCreateTime);
+        Page<Product> productPage = productService.page(pageObj, wrapper);
+        return Result.success(productPage);
+        // ===== 修改结束 =====
     }
 
     /**
      * 首页商品列表（公开接口）
+     * 已修改：只返回 status=1 的上架商品
      */
     @GetMapping("/list")
     public Result list(@RequestParam(defaultValue = "1") Integer page,
@@ -127,8 +141,26 @@ public class ProductController {
                        @RequestParam(required = false) String category,
                        @RequestParam(required = false) String sort) {
         Page<Product> pageObj = new Page<>(page, size);
-        Page<Product> result = productService.getOnSaleProducts(pageObj, keyword, category, sort);
-        return Result.success(result);
+        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Product::getStatus, 1);   // 只显示上架商品
+        if (keyword != null && !keyword.isEmpty()) {
+            wrapper.like(Product::getName, keyword);
+        }
+        if (category != null && !category.isEmpty()) {
+            wrapper.eq(Product::getCategory, category);
+        }
+        // 排序处理
+        if ("price_asc".equals(sort)) {
+            wrapper.orderByAsc(Product::getPrice);
+        } else if ("price_desc".equals(sort)) {
+            wrapper.orderByDesc(Product::getPrice);
+        } else if ("sold_desc".equals(sort)) {
+            wrapper.orderByDesc(Product::getSold);
+        } else {
+            wrapper.orderByDesc(Product::getCreateTime);
+        }
+        Page<Product> productPage = productService.page(pageObj, wrapper);
+        return Result.success(productPage);
     }
 
     /**

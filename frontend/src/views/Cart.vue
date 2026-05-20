@@ -19,14 +19,14 @@
             </div>
             <div class="item-info">
               <h4>{{ item.productName }}</h4>
-              <p class="price">¥{{ item.price }}</p>
+              <p class="price">¥{{ item.productPrice }}</p>
             </div>
             <div class="item-quantity">
               <button @click="updateQuantity(item.id, -1)" :disabled="updating">−</button>
               <span>{{ item.quantity }}</span>
               <button @click="updateQuantity(item.id, 1)" :disabled="updating">+</button>
             </div>
-            <div class="item-total">¥{{ (item.price * item.quantity).toFixed(2) }}</div>
+            <div class="item-total">¥{{ (item.productPrice * item.quantity).toFixed(2) }}</div>
             <button @click="removeItem(item.id)" class="remove-btn">删除</button>
           </div>
         </div>
@@ -63,7 +63,7 @@ const message = ref('')
 const messageType = ref('')
 
 const totalPrice = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)
+  return cartItems.value.reduce((sum, item) => sum + (item.productPrice || 0) * item.quantity, 0).toFixed(2)
 })
 
 const showMessage = (msg, type = 'error') => {
@@ -122,6 +122,7 @@ const removeItem = async (cartId) => {
   }
 }
 
+// ========== 修改 checkout 函数：购买成功后不跳转，显示成功消息并刷新购物车 ==========
 const checkout = async () => {
   checkouting.value = true
   try {
@@ -129,7 +130,9 @@ const checkout = async () => {
       withCredentials: true
     })
     if (res.data.code === 200) {
-      router.push('/orders')
+      showMessage('购买成功！订单已生成，购物车已清空。', 'success')
+      // 重新获取购物车（此时应为空）
+      await fetchCart()
     } else {
       showMessage(res.data.msg || '结算失败', 'error')
     }
@@ -140,6 +143,7 @@ const checkout = async () => {
     checkouting.value = false
   }
 }
+// ========== 修改结束 ==========
 
 onMounted(() => {
   fetchCart()

@@ -121,10 +121,16 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         BigDecimal sellerIncome = payAmount.subtract(platformFee);
 
         // 7. 扣减库存、增加销量（同原有）
+        // 7. 扣减库存、增加销量（同原有）
         for (Cart cart : cartList) {
             Product product = productService.getById(cart.getProductId());
             product.setStock(product.getStock() - cart.getQuantity());
             product.setSold(product.getSold() + cart.getQuantity());
+            // ========== 新增以下代码 ==========
+            if (product.getStock() == 0) {
+                product.setStatus(3); // 3=已售罄
+            }
+            // ========== 新增结束 ==========
             productService.updateById(product);
         }
 
