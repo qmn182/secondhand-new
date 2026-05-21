@@ -12,11 +12,16 @@ import com.example.demo.service.SellerLevelLogService;
 import jakarta.servlet.http.HttpSession;
 
 import com.example.demo.entity.SellerLevelLog;
+// ===== 修改开始：新增导入 =====
+import com.example.demo.entity.vo.ProductAuditVO;      // 商品审核VO
+import org.springframework.beans.BeanUtils;     // 属性拷贝工具
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+// ===== 修改结束 =====
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/admin")
@@ -47,6 +52,7 @@ public class AdminController {
 
     /**
      * 分页查询待审核商品列表（status=0）
+     * ===== 修改开始：返回类型改为 Page<ProductAuditVO>，并手动转换 =====
      */
     @GetMapping("/products/pending")
     public Result pendingProducts(@RequestParam(defaultValue = "1") Integer page,
@@ -57,14 +63,39 @@ public class AdminController {
         } catch (RuntimeException e) {
             return Result.fail(e.getMessage());
         }
+        // 1. 查询 status=0 的商品分页数据
         Page<Product> pageObj = new Page<>(page, size);
-        // 使用 MyBatis Plus 条件构造器查询 status = 0
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Product> wrapper = 
             new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
         wrapper.eq(Product::getStatus, 0).orderByDesc(Product::getCreateTime);
-        Page<Product> result = productService.page(pageObj, wrapper);
-        return Result.success(result);
+        Page<Product> productPage = productService.page(pageObj, wrapper);
+        
+        // 2. 提取所有商家ID，查询对应的用户名
+        List<Long> userIds = productPage.getRecords().stream()
+                .map(Product::getUserId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (userIds.isEmpty()) {
+            // 没有待审核商品时直接返回空分页
+            return Result.success(new Page<ProductAuditVO>());
+        }
+        List<User> sellers = userService.listByIds(userIds);
+        Map<Long, String> usernameMap = sellers.stream()
+                .collect(Collectors.toMap(User::getId, User::getUsername));
+        
+        // 3. 转换为 VO 分页对象
+        Page<ProductAuditVO> voPage = new Page<>(productPage.getCurrent(), productPage.getSize(), productPage.getTotal());
+        List<ProductAuditVO> voList = productPage.getRecords().stream().map(p -> {
+            ProductAuditVO vo = new ProductAuditVO();
+            BeanUtils.copyProperties(p, vo);
+            vo.setSellerUsername(usernameMap.getOrDefault(p.getUserId(), "未知"));
+            return vo;
+        }).collect(Collectors.toList());
+        voPage.setRecords(voList);
+        
+        return Result.success(voPage);
     }
+    // ===== 修改结束 =====
 
     /**
      * 审核商品

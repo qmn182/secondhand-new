@@ -11,6 +11,10 @@
         <button class="btn-refresh" @click="loadUsers" :disabled="loading">
           🔄 {{ loading ? '加载中...' : '刷新列表' }}
         </button>
+        <!-- ===== 新增：商品审核按钮 ===== -->
+        <button class="btn-product-audit" @click="goToProductAudit">
+          🛒 商品审核
+        </button>
         <button class="btn-merchant-app" @click="goToMerchantApplications">
           📋 商家申请审核
         </button>
@@ -27,7 +31,7 @@
               <th>余额</th>
               <th>注册时间</th>
               <th>操作</th>
-            </tr>
+             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
@@ -155,10 +159,17 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 
 const BASE_URL = 'http://localhost:8080'
-const router = useRouter()           
+const router = useRouter()
+
+// ===== 新增：商品审核跳转方法 =====
+const goToProductAudit = () => {
+  router.push('/admin/product-audit')
+}
+
 const goToMerchantApplications = () => {
   router.push('/admin/merchant-applications')
 }
+
 const users = ref([])
 const loading = ref(false)
 const message = ref('')
@@ -328,35 +339,8 @@ onMounted(() => {
 })
 </script>
 
-
 <style scoped>
-/* 原有样式保持不变，添加新按钮样式 */
-.admin-wrapper { /* 已有样式 */ }
-.admin-card { /* 已有样式 */ }
-.header { /* 已有样式 */ }
-
-.toolbar {
-  text-align: right;
-  margin-bottom: 20px;
-}
-.btn-refresh {
-  background: #4f46e5;
-  border: none;
-  border-radius: 40px;
-  padding: 8px 20px;
-  color: white;
-  cursor: pointer;
-}
-.btn-merchant-app {
-  background: #f59e0b;
-  border: none;
-  border-radius: 40px;
-  padding: 8px 20px;
-  color: white;
-  cursor: pointer;
-  margin-left: 10px;
-}
-/* 保留你原有的所有样式，并新增弹窗样式 */
+/* 保留原有样式，并新增商品审核按钮样式 */
 .admin-wrapper {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -379,8 +363,37 @@ onMounted(() => {
 .header .icon { font-size: 48px; margin-bottom: 8px; }
 .header h1 { font-size: 28px; font-weight: 700; background: linear-gradient(120deg, #1e1e2f, #2d2b4e); -webkit-background-clip: text; color: transparent; }
 .header p { color: #6c63ff; font-size: 15px; font-weight: 500; }
-.toolbar { text-align: right; margin-bottom: 20px; }
-.btn-refresh { background: #4f46e5; border: none; border-radius: 40px; padding: 8px 20px; color: white; cursor: pointer; }
+.toolbar {
+  text-align: right;
+  margin-bottom: 20px;
+}
+.btn-refresh {
+  background: #4f46e5;
+  border: none;
+  border-radius: 40px;
+  padding: 8px 20px;
+  color: white;
+  cursor: pointer;
+}
+/* ===== 新增：商品审核按钮样式 ===== */
+.btn-product-audit {
+  background: #10b981;
+  border: none;
+  border-radius: 40px;
+  padding: 8px 20px;
+  color: white;
+  cursor: pointer;
+  margin-left: 10px;
+}
+.btn-merchant-app {
+  background: #f59e0b;
+  border: none;
+  border-radius: 40px;
+  padding: 8px 20px;
+  color: white;
+  cursor: pointer;
+  margin-left: 10px;
+}
 .table-container { overflow-x: auto; border-radius: 20px; background: #f8fafc; padding: 4px; }
 .user-table { width: 100%; border-collapse: collapse; background: white; border-radius: 20px; overflow: hidden; }
 .user-table th { background: #f1f5f9; padding: 14px 12px; text-align: center; }

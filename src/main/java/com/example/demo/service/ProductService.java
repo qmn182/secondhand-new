@@ -56,7 +56,9 @@ public class ProductService extends ServiceImpl<ProductMapper, Product> {
         }
         product.setUserId(userId);
         product.setShopName(seller.getShopName());
-        product.setStatus(1);  
+        // ===== 修改开始：状态改为待审核(0) =====
+        product.setStatus(0);   // 0=待审核，1=已上架
+        // ===== 修改结束 =====
         product.setSold(0);
         if (product.getOriginalPrice() != null && product.getOriginalPrice().compareTo(BigDecimal.ZERO) > 0) {
             product.setDiscount(product.getPrice().divide(product.getOriginalPrice(), 2, RoundingMode.HALF_UP));
