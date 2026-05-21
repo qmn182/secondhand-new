@@ -12,7 +12,8 @@ const router = createRouter({
     { path: '/profile', name: 'profile', component: () => import('@/views/Profile.vue') },
     { path: '/wallet', name: 'wallet', component: () => import('@/views/Wallet.vue') },
     { path: '/cart', name: 'cart', component: () => import('@/views/Cart.vue') },
-    
+    { path: '/points-records', name: 'points-records', component: () => import('@/views/PointsRecords.vue'), meta: { requiresAuth: true } },
+    { path: '/transaction-records', name: 'transaction-records', component: () => import('@/views/TransactionRecords.vue'), meta: { requiresAuth: true } },
     // ========== 新增：订单相关页面 ==========
     {
       path: '/buyer/orders',

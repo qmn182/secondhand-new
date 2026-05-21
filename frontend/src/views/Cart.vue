@@ -31,9 +31,24 @@
           </div>
         </div>
 
+        <!-- ========== 新增：积分抵扣区域 ========== -->
+        <div class="points-discount" v-if="availablePoints > 0">
+          <label class="discount-checkbox">
+            <input type="checkbox" v-model="usePoints" />
+            <span>使用积分抵扣（100积分 = 1元）</span>
+          </label>
+          <div class="points-info">
+            <span>可用积分：{{ availablePoints }}</span>
+            <span v-if="usePoints && deductAmount > 0" class="deduct-amount">
+              预计抵扣 ¥{{ deductAmount }}
+            </span>
+          </div>
+        </div>
+        <!-- =================================== -->
+
         <div class="cart-summary">
           <div class="total-label">总计</div>
-          <div class="total-price">¥{{ totalPrice }}</div>
+          <div class="total-price">¥{{ finalPrice }}</div>
           <button class="checkout-btn" @click="checkout" :disabled="checkouting">
             {{ checkouting ? '结算中...' : '去结算' }}
           </button>
@@ -41,9 +56,7 @@
       </div>
 
       <transition name="fade">
-        <div v-if="message" class="message" :class="messageType">
-          {{ message }}
-        </div>
+        <div v-if="message" class="message" :class="messageType">{{ message }}</div>
       </transition>
     </div>
   </div>
@@ -62,9 +75,30 @@ const updating = ref(false)
 const message = ref('')
 const messageType = ref('')
 
-const totalPrice = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + (item.productPrice || 0) * item.quantity, 0).toFixed(2)
+// 新增积分相关
+const usePoints = ref(false)
+const availablePoints = ref(0)
+
+// 原始总计
+const originalTotal = computed(() => {
+  return cartItems.value.reduce((sum, item) => sum + (item.productPrice || 0) * item.quantity, 0)
 })
+
+// 预计抵扣金额（最多抵扣原始总计）
+const deductAmount = computed(() => {
+  if (!usePoints.value) return 0
+  // 最多抵扣金额不能超过订单总金额
+  const maxDeductByPoints = Math.min(availablePoints.value, originalTotal.value * 100) / 100
+  return Math.min(maxDeductByPoints, originalTotal.value).toFixed(2)
+})
+
+// 最终实付金额
+const finalPrice = computed(() => {
+  return (originalTotal.value - parseFloat(deductAmount.value)).toFixed(2)
+})
+
+// 兼容旧模板的总价（如果需要保留）
+const totalPrice = computed(() => finalPrice.value)
 
 const showMessage = (msg, type = 'error') => {
   message.value = msg
@@ -74,9 +108,7 @@ const showMessage = (msg, type = 'error') => {
 
 const fetchCart = async () => {
   try {
-    const res = await axios.get(`${BASE_URL}/cart/list`, {
-      withCredentials: true
-    })
+    const res = await axios.get(`${BASE_URL}/cart/list`, { withCredentials: true })
     if (res.data.code === 200) {
       cartItems.value = res.data.data || []
     } else {
@@ -88,6 +120,17 @@ const fetchCart = async () => {
   }
 }
 
+const fetchPoints = async () => {
+  try {
+    const res = await axios.get(`${BASE_URL}/user/current`, { withCredentials: true })
+    if (res.data.code === 200) {
+      availablePoints.value = res.data.data.points || 0
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
+
 const updateQuantity = async (cartId, delta) => {
   const item = cartItems.value.find(i => i.id === cartId)
   if (!item) return
@@ -96,10 +139,9 @@ const updateQuantity = async (cartId, delta) => {
 
   updating.value = true
   try {
-    await axios.put(`${BASE_URL}/cart/updateQuantity?cartId=${cartId}&quantity=${newQty}`, null, {
-      withCredentials: true
-    })
+    await axios.put(`${BASE_URL}/cart/updateQuantity?cartId=${cartId}&quantity=${newQty}`, null, { withCredentials: true })
     await fetchCart()
+    // 积分抵扣选项在商品数量变化后应该重新计算，但保留用户勾选状态
   } catch (error) {
     console.error(error)
     showMessage('修改数量失败', 'error')
@@ -111,9 +153,7 @@ const updateQuantity = async (cartId, delta) => {
 const removeItem = async (cartId) => {
   if (confirm('确认删除该商品？')) {
     try {
-      await axios.delete(`${BASE_URL}/cart/remove/${cartId}`, {
-        withCredentials: true
-      })
+      await axios.delete(`${BASE_URL}/cart/remove/${cartId}`, { withCredentials: true })
       await fetchCart()
     } catch (error) {
       console.error(error)
@@ -122,17 +162,31 @@ const removeItem = async (cartId) => {
   }
 }
 
-// ========== 修改 checkout 函数：购买成功后不跳转，显示成功消息并刷新购物车 ==========
 const checkout = async () => {
+  if (!usePoints.value && availablePoints.value === 0) {
+    // 未勾选积分，直接0积分
+  }
+  let pointsToUse = 0
+  if (usePoints.value) {
+    // 计算实际能抵扣的积分（不超过订单金额对应的积分）
+    pointsToUse = Math.min(availablePoints.value, originalTotal.value * 100)
+    if (pointsToUse <= 0) {
+      showMessage('积分不足，无法抵扣', 'error')
+      return
+    }
+  }
   checkouting.value = true
   try {
     const res = await axios.post(`${BASE_URL}/order/createFromCart`, null, {
+      params: { usePoints: pointsToUse },
       withCredentials: true
     })
     if (res.data.code === 200) {
       showMessage('购买成功！订单已生成，购物车已清空。', 'success')
-      // 重新获取购物车（此时应为空）
       await fetchCart()
+      // 重置抵扣选项
+      usePoints.value = false
+      await fetchPoints() // 刷新积分
     } else {
       showMessage(res.data.msg || '结算失败', 'error')
     }
@@ -143,10 +197,10 @@ const checkout = async () => {
     checkouting.value = false
   }
 }
-// ========== 修改结束 ==========
 
 onMounted(() => {
   fetchCart()
+  fetchPoints()
 })
 </script>
 
@@ -416,5 +470,33 @@ onMounted(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+.points-discount {
+  background: #fef9c3;
+  border-radius: 20px;
+  padding: 12px 20px;
+  margin: 16px auto;
+  max-width: 1000px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.discount-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.points-info {
+  display: flex;
+  gap: 16px;
+  align-items: baseline;
+}
+.deduct-amount {
+  color: #4f46e5;
+  font-weight: 700;
 }
 </style>

@@ -1,7 +1,6 @@
 <template>
   <div class="wallet-wrapper">
     <div class="wallet-card">
-      <!-- 居中标题（与发布商品、我的商品保持一致） -->
       <div class="page-header">
         <div class="page-title">我的钱包</div>
       </div>
@@ -12,16 +11,18 @@
         <div class="balance-value">¥{{ balance }}</div>
       </div>
 
+      <!-- 积分卡片（新增） -->
+      <div class="points-card" @click="goToPointsRecords">
+        <div class="points-label">我的积分</div>
+        <div class="points-value">{{ points }} 分</div>
+        <div class="points-tip">点击查看明细</div>
+      </div>
+
       <!-- 充值区域 -->
       <div class="recharge-section">
         <div class="input-icon">
           <span class="icon">💳</span>
-          <input 
-            type="number" 
-            v-model="rechargeAmount" 
-            placeholder="输入充值金额" 
-            step="0.01"
-          />
+          <input type="number" v-model="rechargeAmount" placeholder="输入充值金额" step="0.01" />
         </div>
         <button class="btn-recharge" @click="recharge" :disabled="recharging">
           {{ recharging ? '充值中...' : '立即充值' }}
@@ -32,21 +33,22 @@
       <div class="records-header">
         <span class="records-icon">📋</span>
         <h3>交易记录</h3>
+        <router-link to="/transaction-records" class="more-link">更多</router-link>
       </div>
 
-      <!-- 交易记录列表（卡片式） -->
+      <!-- 交易记录列表（仅展示最近5条） -->
       <div v-if="transactions.length === 0" class="empty-state">
         <div class="empty-icon">📭</div>
         <p>暂无交易记录</p>
       </div>
       <div v-else class="transactions-list">
-        <div v-for="tx in transactions" :key="tx.id" class="transaction-item">
+        <div v-for="tx in transactions.slice(0,5)" :key="tx.id" class="transaction-item">
           <div class="tx-info">
             <div class="tx-type">{{ tx.type }}</div>
-            <div class="tx-time">{{ tx.createTime }}</div>
+            <div class="tx-time">{{ formatDate(tx.createTime) }}</div>
           </div>
           <div class="tx-amount" :class="tx.amount > 0 ? 'income' : 'expense'">
-            {{ tx.amount > 0 ? '+' : '' }}¥{{ tx.amount }}
+            {{ tx.amount > 0 ? '+' : '' }}¥{{ Math.abs(tx.amount).toFixed(2) }}
           </div>
           <div class="tx-remark" v-if="tx.remark">{{ tx.remark }}</div>
         </div>
@@ -54,9 +56,7 @@
 
       <!-- 消息提示 -->
       <transition name="fade">
-        <div v-if="message" class="message" :class="messageType">
-          {{ message }}
-        </div>
+        <div v-if="message" class="message" :class="messageType">{{ message }}</div>
       </transition>
     </div>
   </div>
@@ -64,10 +64,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
 
 const BASE_URL = 'http://localhost:8080'
+const router = useRouter()
+
 const balance = ref(0)
+const points = ref(0)
 const transactions = ref([])
 const rechargeAmount = ref('')
 const recharging = ref(false)
@@ -80,19 +84,35 @@ const showMessage = (msg, type = 'error') => {
   setTimeout(() => { message.value = '' }, 3000)
 }
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleString()
+}
+
 const fetchBalance = async () => {
   try {
-    const res = await axios.get(`${BASE_URL}/user/wallet/balance`, {
-      withCredentials: true
-    })
-    if (res.data.code === 200) {
-      balance.value = res.data.data
-    } else {
-      showMessage(res.data.msg || '获取余额失败')
-    }
+    const res = await axios.get(`${BASE_URL}/user/wallet/balance`, { withCredentials: true })
+    if (res.data.code === 200) balance.value = res.data.data
+  } catch (error) {
+    showMessage('获取余额失败')
+  }
+}
+
+const fetchPoints = async () => {
+  try {
+    const res = await axios.get(`${BASE_URL}/user/current`, { withCredentials: true })
+    if (res.data.code === 200) points.value = res.data.data.points || 0
   } catch (error) {
     console.error(error)
-    showMessage('网络错误')
+  }
+}
+
+const fetchTransactions = async () => {
+  try {
+    const res = await axios.get(`${BASE_URL}/user/transaction/records`, { withCredentials: true })
+    if (res.data.code === 200) transactions.value = res.data.data || []
+  } catch (error) {
+    console.error(error)
   }
 }
 
@@ -115,19 +135,25 @@ const recharge = async () => {
       showMessage('充值成功', 'success')
       rechargeAmount.value = ''
       await fetchBalance()
+      await fetchTransactions()
     } else {
       showMessage(res.data.msg || '充值失败')
     }
   } catch (error) {
-    console.error(error)
     showMessage('网络错误')
   } finally {
     recharging.value = false
   }
 }
 
+const goToPointsRecords = () => {
+  router.push('/points-records')
+}
+
 onMounted(() => {
   fetchBalance()
+  fetchPoints()
+  fetchTransactions()
 })
 </script>
 
@@ -188,6 +214,37 @@ onMounted(() => {
   font-weight: 800;
   color: white;
   text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 积分卡片（新增） */
+.points-card {
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  border-radius: 28px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 28px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.points-card:hover {
+  transform: translateY(-2px);
+}
+.points-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.8);
+  letter-spacing: 1px;
+}
+.points-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: white;
+  margin-top: 6px;
+}
+.points-tip {
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+  margin-top: 8px;
 }
 
 /* 充值区域 */
@@ -278,7 +335,17 @@ onMounted(() => {
   margin: 0;
 }
 
-/* 交易记录列表（限制最大宽度，居中） */
+.more-link {
+  font-size: 13px;
+  color: #4f46e5;
+  text-decoration: none;
+  margin-left: auto;
+}
+.more-link:hover {
+  text-decoration: underline;
+}
+
+/* 交易记录列表 */
 .transactions-list {
   display: flex;
   flex-direction: column;

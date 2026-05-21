@@ -3,12 +3,19 @@ package com.example.demo.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.demo.common.Result;
 import com.example.demo.entity.User;
+import com.example.demo.entity.vo.OrderVO;
+import com.example.demo.entity.vo.ShopProductVO;
+import com.example.demo.entity.PointsRecord;
+import com.example.demo.entity.Transaction;
+
 import com.example.demo.service.UserService;
 import com.google.code.kaptcha.impl.DefaultKaptcha;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.demo.service.PointsRecordService;
+import com.example.demo.service.TransactionService;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -29,7 +36,10 @@ public class UserController {
 
     @Autowired
     private DefaultKaptcha captchaProducer;
-
+    @Autowired
+    private PointsRecordService pointsRecordService;
+    @Autowired
+    private TransactionService transactionService;
     @GetMapping("/captcha")
     public Result captcha(HttpSession session) throws Exception {
         String capText = captchaProducer.createText();
@@ -362,4 +372,28 @@ public class UserController {
         boolean removed = userService.removeById(userId);
         return removed ? Result.success("删除成功") : Result.fail("删除失败");
     }
+    // 获取当前用户的积分记录
+    @GetMapping("/points/records")
+    public Result getPointsRecords(HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) return Result.fail("未登录");
+        List<PointsRecord> records = pointsRecordService.list(
+            new LambdaQueryWrapper<PointsRecord>().eq(PointsRecord::getUserId, user.getId())
+                .orderByDesc(PointsRecord::getCreateTime)
+        );
+        return Result.success(records);
+    }
+
+    // 获取当前用户的交易流水
+    @GetMapping("/transaction/records")
+    public Result getTransactionRecords(HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) return Result.fail("未登录");
+        List<Transaction> records = transactionService.list(
+            new LambdaQueryWrapper<Transaction>().eq(Transaction::getUserId, user.getId())
+                .orderByDesc(Transaction::getCreateTime)
+        );
+        return Result.success(records);
+    }
+
 }

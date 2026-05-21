@@ -15,7 +15,10 @@
           </div>
         </div>
       </div>
-
+      <div class="points-info">
+        <span>⭐ 当前积分：{{ userInfo.points || 0 }} 分</span>
+        <router-link to="/points-records" class="points-link">查看明细 →</router-link>
+      </div>
       <!-- 表单 -->
       <div class="form-panel">
         <div class="input-group">
@@ -527,5 +530,18 @@ onMounted(() => {
   font-weight: 600;
   color: #64748b;
   cursor: not-allowed;
+}
+.points-info {
+  background: #fef9c3;
+  border-radius: 20px;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.points-link {
+  color: #4f46e5;
+  text-decoration: none;
 }
 </style>
