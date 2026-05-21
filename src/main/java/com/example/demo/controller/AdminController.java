@@ -10,7 +10,7 @@ import com.example.demo.service.UserService;
 import com.example.demo.service.MerchantLevelService;
 import com.example.demo.service.SellerLevelLogService;
 import jakarta.servlet.http.HttpSession;
-
+import java.util.List;
 import com.example.demo.entity.SellerLevelLog;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -155,5 +155,22 @@ public class AdminController {
         } catch (RuntimeException e) {
             return Result.fail(e.getMessage());
         }
+    }
+
+    /**
+     * 获取所有商家列表（用于等级管理）
+     * GET /admin/sellers
+     */
+    @GetMapping("/sellers")
+    public Result getSellers(HttpSession session) {
+        User admin = (User) session.getAttribute("user");
+        if (admin == null || admin.getRole() != 3) {
+            return Result.fail("无权限");
+        }
+        List<User> sellers = userService.lambdaQuery()
+                .eq(User::getRole, 2)  // 角色为商家
+                .select(User::getId, User::getUsername, User::getShopName, User::getLevel)
+                .list();
+        return Result.success(sellers);
     }
 }

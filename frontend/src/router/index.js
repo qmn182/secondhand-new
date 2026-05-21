@@ -14,6 +14,7 @@ const router = createRouter({
     { path: '/cart', name: 'cart', component: () => import('@/views/Cart.vue') },
     { path: '/points-records', name: 'points-records', component: () => import('@/views/PointsRecords.vue'), meta: { requiresAuth: true } },
     { path: '/transaction-records', name: 'transaction-records', component: () => import('@/views/TransactionRecords.vue'), meta: { requiresAuth: true } },
+    { path: '/admin/merchant-level', name: 'merchant-level', component: () => import('@/views/admin/MerchantLevel.vue'), meta: { requiresAuth: true, roles: [3] } },
     // ========== 新增：订单相关页面 ==========
     {
       path: '/buyer/orders',
@@ -63,6 +64,7 @@ const router = createRouter({
       name: 'edit-product',
       component: () => import('@/views/product/EditProduct.vue')
     }
+    
   ]
 })
 

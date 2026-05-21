@@ -35,7 +35,7 @@
             <span>新旧程度：{{ product.condition || '未标注' }}</span>
           </div>
           <div class="seller-info" @click="goToShop">
-            <span>🏪 店铺：{{ product.shopName || '官方店铺' }}</span>
+            <span>🏪 店铺：{{ product.shopName || '官方店铺' }}（等级 Lv.{{ product.sellerLevel || 1 }}）</span>
             <span class="arrow">→</span>
           </div>
           <div class="actions">

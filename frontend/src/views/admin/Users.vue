@@ -13,7 +13,8 @@
         </button>
         <button class="btn-merchant-app" @click="goToMerchantApplications">
           📋 商家申请审核
-        </button>
+        </button> 
+        <router-link to="/admin/merchant-level" class="btn-level">🏅 商家等级管理</router-link>   
       </div>
       <div class="table-container">
         <table class="user-table">
@@ -355,6 +356,20 @@ onMounted(() => {
   color: white;
   cursor: pointer;
   margin-left: 10px;
+}
+.btn-level {
+  background: #8b5cf6;
+  border: none;
+  border-radius: 40px;
+  padding: 8px 20px;
+  color: white;
+  cursor: pointer;
+  margin-left: 10px;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-level:hover {
+  background: #7c3aed;
 }
 /* 保留你原有的所有样式，并新增弹窗样式 */
 .admin-wrapper {

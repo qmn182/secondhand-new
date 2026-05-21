@@ -33,18 +33,27 @@ public class MerchantLevelService {
     private MerchantEvaluationService merchantEvaluationService;
     @Autowired
     private SellerLevelLogService levelLogService;
+    
     /**
      * 重新计算所有商家的等级（定时任务调用）
      * @param operator 操作者标识（如 "system"）
      */
     @Transactional
     public void recalculateAllMerchantLevels(String operator) {
-        // 查询所有角色为商家的用户（role=2 且 merchantStatus=2 已通过审核）
-        List<User> merchants = userService.list(new LambdaQueryWrapper<User>()
-                .eq(User::getRole, 2)
-                .eq(User::getMerchantStatus, 2));
-        for (User merchant : merchants) {
-            recalculateSingleMerchantLevel(merchant, operator);
+        List<User> sellers = userService.lambdaQuery().eq(User::getRole, 2).list();
+        for (User seller : sellers) {
+            int newLevel = calculateLevel(seller.getId());   // 改用 calculateLevel
+            if (newLevel != seller.getLevel()) {
+                seller.setLevel(newLevel);
+                userService.updateById(seller);
+                SellerLevelLog log = new SellerLevelLog();
+                log.setSellerId(seller.getId());
+                log.setOldLevel(seller.getLevel());
+                log.setNewLevel(newLevel);
+                log.setReason("自动重算");
+                log.setOperator(operator);
+                levelLogService.save(log);
+            }
         }
     }
 

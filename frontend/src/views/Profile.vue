@@ -79,6 +79,7 @@
           <div class="status-icon">✅</div>
           <div>
             <p class="status-title">您已是商家</p>
+            <p class="status-desc">店铺等级：Lv.{{ userInfo.level || 1 }}（等级越高，交易费率越高）</p>
             <p class="status-desc">可以发布商品、管理订单</p>
             <button class="btn-outline" @click="goToShop">进入我的店铺</button>
           </div>
