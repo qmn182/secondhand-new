@@ -40,13 +40,20 @@
           </div>
           <div class="actions">
             <div class="quantity">
-              <button @click="decreaseQty">-</button>
-              <input type="number" v-model.number="quantity" min="1" :max="product.stock" />
-              <button @click="increaseQty">+</button>
+              <button @click="decreaseQty" :disabled="isOwnProduct">-</button>
+              <input type="number" v-model.number="quantity" min="1" :max="product.stock" :disabled="isOwnProduct" />
+              <button @click="increaseQty" :disabled="isOwnProduct">+</button>
             </div>
-            <button class="btn-cart" @click="addToCart($event)" :disabled="adding">加入购物车</button>
-            <button class="btn-buy" @click="buyNow" :disabled="buying">立即购买</button>
+            <!-- 修改开始：添加 isOwnProduct 禁用条件 -->
+            <button class="btn-cart" @click="addToCart($event)" :disabled="adding || isOwnProduct">加入购物车</button>
+            <button class="btn-buy" @click="buyNow" :disabled="buying || isOwnProduct">立即购买</button>
+            <!-- 修改结束 -->
           </div>
+          <!-- 修改开始：警告信息 -->
+          <div v-if="isOwnProduct" class="warning-message">
+            ⚠️ 您不能购买自己发布的商品
+          </div>
+          <!-- 修改结束 -->
           <div class="description">
             <h3>商品描述</h3>
             <p>{{ product.description || '暂无描述' }}</p>
@@ -63,7 +70,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, nextTick } from 'vue'   // 关键：导入 nextTick
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import ProductEvaluations from './ProductEvaluations.vue'
@@ -79,6 +86,10 @@ const quantity = ref(1)
 const adding = ref(false)
 const buying = ref(false)
 
+// 修改开始：添加当前用户状态
+const user = ref(null)
+// 修改结束
+
 const imageList = computed(() => {
   if (!product.value) return []
   if (product.value.images) {
@@ -91,6 +102,12 @@ const imageList = computed(() => {
   return ['/placeholder.png']
 })
 const currentImage = ref('')
+
+// 修改开始：计算属性判断是否为自营商品
+const isOwnProduct = computed(() => {
+  return user.value && product.value && user.value.id === product.value.userId
+})
+// 修改结束
 
 const fetchProductDetail = async () => {
   loading.value = true
@@ -110,6 +127,20 @@ const fetchProductDetail = async () => {
   }
 }
 
+// 修改开始：获取当前登录用户
+const fetchCurrentUser = async () => {
+  try {
+    const res = await axios.get(`${BASE_URL}/user/current`, { withCredentials: true })
+    if (res.data.code === 200) {
+      user.value = res.data.data
+    }
+  } catch (error) {
+    console.error('获取用户信息失败', error)
+    user.value = null
+  }
+}
+// 修改结束
+
 const decreaseQty = () => {
   if (quantity.value > 1) quantity.value--
 }
@@ -117,19 +148,15 @@ const increaseQty = () => {
   if (product.value && quantity.value < product.value.stock) quantity.value++
 }
 
-// 修改后的 addToCart，带事件对象阻止冒泡 + 严格防抖
 const addToCart = async (event) => {
   if (event) {
     event.preventDefault()
     event.stopPropagation()
   }
   if (!product.value) return
-  if (adding.value) {
-    console.log('重复请求被阻止')
-    return
-  }
+  if (adding.value) return
   adding.value = true
-  await nextTick()  // 确保按钮禁用样式立即生效
+  await nextTick()
   try {
     const res = await axios.post(`${BASE_URL}/cart/add`, null, {
       params: { productId: product.value.id, quantity: quantity.value },
@@ -137,7 +164,6 @@ const addToCart = async (event) => {
     })
     if (res.data.code === 200) {
       console.log('已加入购物车')
-      // 可选：轻提示，但不使用 alert
     } else {
       console.error(res.data.msg)
     }
@@ -146,7 +172,7 @@ const addToCart = async (event) => {
   } finally {
     setTimeout(() => {
       adding.value = false
-    }, 1000)  // 1秒内禁止重复点击
+    }, 1000)
   }
 }
 
@@ -175,11 +201,12 @@ const goToShop = () => {
 }
 
 onMounted(() => {
+  // 修改开始：并行获取用户信息和商品详情
+  fetchCurrentUser()
+  // 修改结束
   fetchProductDetail()
 })
 </script>
-
-
 
 <style scoped>
 .product-detail-wrapper {
@@ -324,6 +351,18 @@ onMounted(() => {
 .btn-buy:hover {
   background: #6366f1;
 }
+/* 修改开始：警告消息样式 */
+.warning-message {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 10px 16px;
+  border-radius: 40px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  text-align: center;
+}
+/* 修改结束 */
 .description {
   margin-top: 24px;
   border-top: 1px solid #e2e8f0;

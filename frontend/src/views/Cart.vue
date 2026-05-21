@@ -34,10 +34,17 @@
         <div class="cart-summary">
           <div class="total-label">总计</div>
           <div class="total-price">¥{{ totalPrice }}</div>
-          <button class="checkout-btn" @click="checkout" :disabled="checkouting">
+          <!-- ===== 修改开始：添加 hasOwnProduct 禁用条件 ===== -->
+          <button class="checkout-btn" @click="checkout" :disabled="checkouting || hasOwnProduct">
             {{ checkouting ? '结算中...' : '去结算' }}
           </button>
+          <!-- ===== 修改结束 ===== -->
         </div>
+        <!-- ===== 修改开始：显示警告信息 ===== -->
+        <div v-if="hasOwnProduct" class="warning-message">
+          ⚠️ 购物车中包含您自己发布的商品，无法结算
+        </div>
+        <!-- ===== 修改结束 ===== -->
       </div>
 
       <transition name="fade">
@@ -61,16 +68,41 @@ const checkouting = ref(false)
 const updating = ref(false)
 const message = ref('')
 const messageType = ref('')
+// ===== 修改开始：定义当前用户信息 =====
+const user = ref(null)
+// ===== 修改结束 =====
 
 const totalPrice = computed(() => {
   return cartItems.value.reduce((sum, item) => sum + (item.productPrice || 0) * item.quantity, 0).toFixed(2)
 })
+
+// ===== 修改开始：计算属性 - 购物车中是否包含自己发布的商品 =====
+const hasOwnProduct = computed(() => {
+  if (!user.value) return false
+  return cartItems.value.some(item => item.userId === user.value.id)
+})
+// ===== 修改结束 =====
 
 const showMessage = (msg, type = 'error') => {
   message.value = msg
   messageType.value = type
   setTimeout(() => { message.value = '' }, 3000)
 }
+
+// ===== 修改开始：获取当前登录用户信息 =====
+const fetchUser = async () => {
+  try {
+    const res = await axios.get(`${BASE_URL}/user/info`, { withCredentials: true })
+    if (res.data.code === 200) {
+      user.value = res.data.data
+    } else {
+      console.error('获取用户信息失败', res.data.msg)
+    }
+  } catch (err) {
+    console.error('获取用户信息失败', err)
+  }
+}
+// ===== 修改结束 =====
 
 const fetchCart = async () => {
   try {
@@ -124,6 +156,12 @@ const removeItem = async (cartId) => {
 
 // ========== 修改 checkout 函数：购买成功后不跳转，显示成功消息并刷新购物车 ==========
 const checkout = async () => {
+  // ===== 修改开始：二次校验，防止绕过禁用 =====
+  if (hasOwnProduct.value) {
+    showMessage('购物车中包含您自己发布的商品，无法结算', 'error')
+    return
+  }
+  // ===== 修改结束 =====
   checkouting.value = true
   try {
     const res = await axios.post(`${BASE_URL}/order/createFromCart`, null, {
@@ -145,11 +183,11 @@ const checkout = async () => {
 }
 // ========== 修改结束 ==========
 
-onMounted(() => {
-  fetchCart()
+onMounted(async () => {
+  await fetchUser()   // 先获取用户信息
+  await fetchCart()   // 再获取购物车
 })
 </script>
-
 
 <style scoped>
 /* ========== 与首页完全统一的风格 ========== */
@@ -386,6 +424,21 @@ onMounted(() => {
   cursor: not-allowed;
   transform: none;
 }
+
+/* ===== 修改开始：警告信息样式 ===== */
+.warning-message {
+  max-width: 1000px;
+  margin: 16px auto 0;
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 12px 20px;
+  border-radius: 40px;
+  text-align: center;
+  font-weight: 500;
+  font-size: 14px;
+  border: 1px solid #fecaca;
+}
+/* ===== 修改结束 ===== */
 
 /* 消息提示 */
 .message {

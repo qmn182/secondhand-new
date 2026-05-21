@@ -22,19 +22,64 @@
         </div>
       </div>
 
-      <!-- 第二行 -->
+      <!-- 第二行：导航栏（根据角色动态显示） -->
+      <!-- 2次修改开始 -->
       <div class="nav-bar">
-        <router-link to="/" class="nav-link" active-class="active">首页</router-link>
-        <router-link to="/publish" class="nav-link" active-class="active">发布商品</router-link>
-        <router-link to="/my-products" class="nav-link" active-class="active">我的商品</router-link>
-        <router-link to="/cart" class="nav-link" active-class="active">购物车</router-link>
-        <!-- 买家显示 -->
-        <router-link v-if="user && user.role !== 2" to="/buyer/orders" class="nav-link">我的订单</router-link>
-        <!-- 商家显示 -->
-        <router-link v-if="user && user.role === 2" to="/merchant/orders" class="nav-link">订单管理</router-link>
-        <router-link to="/wallet" class="nav-link" active-class="active">钱包</router-link>
-        <router-link to="/profile" class="nav-link" active-class="active">个人中心</router-link>
+        <!-- 未登录：只显示首页 -->
+        <template v-if="!user">
+          <router-link to="/" class="nav-link" active-class="active">首页</router-link>
+        </template>
+        <!-- 商家（role === 2） -->
+        <template v-else-if="user.role === 2">
+          <router-link to="/" class="nav-link" active-class="active">首页</router-link>
+          <router-link to="/publish" class="nav-link" active-class="active">发布商品</router-link>
+          <router-link to="/my-products" class="nav-link" active-class="active">我的商品</router-link>
+          <!-- 第4次修改开始：新增“我的订单”（卖家作为买家的订单） -->
+          <router-link to="/buyer/orders" class="nav-link" active-class="active">我的订单</router-link>
+          <!-- 第4次修改结束 -->
+          <!-- 第3次修改开始 -->
+          <router-link to="/merchant/orders" class="nav-link" active-class="active">订单管理</router-link>
+          <!-- 第3次修改结束 -->
+          <router-link to="/cart" class="nav-link" active-class="active">购物车</router-link>
+          <router-link to="/wallet" class="nav-link" active-class="active">钱包</router-link>
+          <router-link to="/profile" class="nav-link" active-class="active">个人中心</router-link>
+        </template>
+        <!-- 普通买家（role === 1） -->
+        <template v-else-if="user.role === 1">
+          <router-link to="/" class="nav-link" active-class="active">首页</router-link>
+          <router-link to="/buyer/orders" class="nav-link" active-class="active">我的订单</router-link>
+          <router-link to="/cart" class="nav-link" active-class="active">购物车</router-link>
+          <router-link to="/wallet" class="nav-link" active-class="active">钱包</router-link>
+          <router-link to="/profile" class="nav-link" active-class="active">个人中心</router-link>
+        </template>
       </div>
+      <!-- 2次修改结束 -->
+
+      <!-- ===== 修改开始：新增排序栏 ===== -->
+      <div class="sort-bar">
+        <span>排序：</span>
+        <button 
+          :class="{ active: sortType === 'time_desc' }" 
+          @click="changeSort('time_desc')"
+        >最新</button>
+        <button 
+          :class="{ active: sortType === 'price_asc' }" 
+          @click="changeSort('price_asc')"
+        >价格升序</button>
+        <button 
+          :class="{ active: sortType === 'price_desc' }" 
+          @click="changeSort('price_desc')"
+        >价格降序</button>
+        <button 
+          :class="{ active: sortType === 'sold_desc' }" 
+          @click="changeSort('sold_desc')"
+        >销量最高</button>
+        <button 
+          :class="{ active: sortType === 'rating_desc' }" 
+          @click="changeSort('rating_desc')"
+        >好评优先</button>
+      </div>
+      <!-- ===== 修改结束 ===== -->
 
       <!-- 商品网格 -->
       <div class="product-grid">
@@ -78,6 +123,9 @@ const user = ref(null)
 const keyword = ref('')
 const productList = ref([])
 const loading = ref(false)
+// ===== 修改开始：新增排序状态 =====
+const sortType = ref('time_desc')   // 默认最新
+// ===== 修改结束 =====
 
 const fetchCurrentUser = async () => {
   try {
@@ -97,10 +145,11 @@ const fetchCurrentUser = async () => {
   }
 }
 
-const loadProducts = async (kw = '') => {
+// ===== 修改开始：loadProducts 增加 sort 参数 =====
+const loadProducts = async (kw = '', sort = sortType.value) => {
   loading.value = true
   try {
-    const params = { page: 1, size: 12 }
+    const params = { page: 1, size: 12, sort: sort }
     if (kw) params.keyword = kw
     const res = await axios.get(`${BASE_URL}/product/list`, { params })
     if (res.data.code === 200) {
@@ -114,10 +163,18 @@ const loadProducts = async (kw = '') => {
     loading.value = false
   }
 }
+// ===== 修改结束 =====
 
 const searchProducts = () => {
-  loadProducts(keyword.value)
+  loadProducts(keyword.value, sortType.value)
 }
+
+// ===== 修改开始：切换排序方法 =====
+const changeSort = (sort) => {
+  sortType.value = sort
+  loadProducts(keyword.value, sort)
+}
+// ===== 修改结束 =====
 
 const viewDetail = (id) => {
   router.push(`/product/${id}`)
@@ -145,8 +202,8 @@ onMounted(() => {
 })
 </script>
 
-
 <style scoped>
+/* ===== 原有样式保持不变，新增排序栏样式 ===== */
 .home-wrapper {
   min-height: 100vh;
   background: linear-gradient(135deg, #8c9eff 0%, #c1a0ff 100%);
@@ -254,6 +311,7 @@ onMounted(() => {
   border-color: #94a3b8;
 }
 
+/* 2次修改开始：导航栏样式保持不变（原有样式已足够） */
 .nav-bar {
   display: flex;
   justify-content: space-between;
@@ -286,6 +344,48 @@ onMounted(() => {
 .nav-link.active {
   background: #4f46e5;
   color: white;
+}
+/* 2次修改结束 */
+
+/* ===== 新增排序栏样式 ===== */
+.sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-wrap: wrap;
+}
+
+.sort-bar span {
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.sort-bar button {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 40px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.sort-bar button.active {
+  background: #4f46e5;
+  color: white;
+  border-color: #4f46e5;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.2);
+}
+
+.sort-bar button:hover:not(.active) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .product-grid {

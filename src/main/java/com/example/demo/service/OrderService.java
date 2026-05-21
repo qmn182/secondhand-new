@@ -77,6 +77,11 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
             Product product = productService.getById(cart.getProductId());
             if (product == null || product.getStatus() != 1) throw new RuntimeException("商品已下架");
             if (product.getStock() < cart.getQuantity()) throw new RuntimeException("商品库存不足");
+            // ========== 新增开始 ==========
+            if (product.getUserId().equals(userId)) {
+                throw new RuntimeException("不能购买自己发布的商品");
+            }
+            // ========== 新增结束 ==========
             if (sellerId == null) sellerId = product.getUserId();
             else if (!sellerId.equals(product.getUserId())) throw new RuntimeException("暂不支持跨商家结算");
             total = total.add(product.getPrice().multiply(BigDecimal.valueOf(cart.getQuantity())));
@@ -120,7 +125,6 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         BigDecimal platformFee = payAmount.multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
         BigDecimal sellerIncome = payAmount.subtract(platformFee);
 
-        // 7. 扣减库存、增加销量（同原有）
         // 7. 扣减库存、增加销量（同原有）
         for (Cart cart : cartList) {
             Product product = productService.getById(cart.getProductId());
