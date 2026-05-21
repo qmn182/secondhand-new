@@ -284,4 +284,82 @@ public class UserController {
         session.setAttribute("user", user);   // 更新 session
         return Result.success("更新成功");
     }
+    /**
+     * 管理员修改用户信息（角色、状态、基本信息等）
+     * PUT /user/admin/update
+     */
+    @PutMapping("/admin/update")
+    public Result adminUpdateUser(@RequestBody User updatedUser, HttpSession session) {
+        User admin = (User) session.getAttribute("user");
+        if (admin == null || admin.getRole() != 3) {
+            return Result.fail("无权限");
+        }
+        if (updatedUser.getId() == null) {
+            return Result.fail("用户ID不能为空");
+        }
+        User user = userService.getById(updatedUser.getId());
+        if (user == null) {
+            return Result.fail("用户不存在");
+        }
+        // 只允许管理员修改以下字段
+        if (updatedUser.getPhone() != null) user.setPhone(updatedUser.getPhone());
+        if (updatedUser.getEmail() != null) user.setEmail(updatedUser.getEmail());
+        if (updatedUser.getCity() != null) user.setCity(updatedUser.getCity());
+        if (updatedUser.getGender() != null) user.setGender(updatedUser.getGender());
+        if (updatedUser.getBankAccount() != null) user.setBankAccount(updatedUser.getBankAccount());
+        if (updatedUser.getRole() != null) user.setRole(updatedUser.getRole());
+        if (updatedUser.getStatus() != null) user.setStatus(updatedUser.getStatus());
+        if (updatedUser.getShopName() != null) user.setShopName(updatedUser.getShopName());
+
+        userService.updateById(user);
+        return Result.success("修改成功");
+    }
+
+    /**
+     * 管理员为用户充值（直接增加钱包余额）
+     * POST /user/admin/recharge
+     */
+    @PostMapping("/admin/recharge")
+    public Result adminRecharge(@RequestParam Long userId, @RequestParam BigDecimal amount, HttpSession session) {
+        User admin = (User) session.getAttribute("user");
+        if (admin == null || admin.getRole() != 3) {
+            return Result.fail("无权限");
+        }
+        if (userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return Result.fail("参数错误，金额必须大于0");
+        }
+        User user = userService.getById(userId);
+        if (user == null) {
+            return Result.fail("用户不存在");
+        }
+        user.setWallet(user.getWallet().add(amount));
+        userService.updateById(user);
+        // 可选：记录管理员充值流水（建议添加 transaction）
+        return Result.success("充值成功，当前余额：" + user.getWallet());
+    }
+
+    /**
+     * 管理员删除用户
+     * DELETE /user/admin/delete/{userId}
+     */
+    @DeleteMapping("/admin/delete/{userId}")
+    public Result adminDeleteUser(@PathVariable Long userId, HttpSession session) {
+        User admin = (User) session.getAttribute("user");
+        if (admin == null || admin.getRole() != 3) {
+            return Result.fail("无权限");
+        }
+        if (userId == null) {
+            return Result.fail("用户ID不能为空");
+        }
+        User user = userService.getById(userId);
+        if (user == null) {
+            return Result.fail("用户不存在");
+        }
+        // 不能删除自己
+        if (userId.equals(admin.getId())) {
+            return Result.fail("不能删除当前登录的管理员账号");
+        }
+        boolean removed = userService.removeById(userId);
+        return removed ? Result.success("删除成功") : Result.fail("删除失败");
+    }
 }
