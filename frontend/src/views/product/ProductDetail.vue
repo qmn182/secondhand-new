@@ -44,7 +44,7 @@
               <input type="number" v-model.number="quantity" min="1" :max="product.stock" />
               <button @click="increaseQty">+</button>
             </div>
-            <button class="btn-cart" @click="addToCart" :disabled="adding">加入购物车</button>
+            <button class="btn-cart" @click="addToCart($event)" :disabled="adding">加入购物车</button>
             <button class="btn-buy" @click="buyNow" :disabled="buying">立即购买</button>
           </div>
           <div class="description">
@@ -63,10 +63,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'   // 关键：导入 nextTick
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import ProductEvaluations from './ProductEvaluations.vue'  // 确保路径正确
+import ProductEvaluations from './ProductEvaluations.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -79,7 +79,6 @@ const quantity = ref(1)
 const adding = ref(false)
 const buying = ref(false)
 
-// 图片处理：支持 imageUrl 或 images JSON 数组
 const imageList = computed(() => {
   if (!product.value) return []
   if (product.value.images) {
@@ -118,23 +117,36 @@ const increaseQty = () => {
   if (product.value && quantity.value < product.value.stock) quantity.value++
 }
 
-const addToCart = async () => {
+// 修改后的 addToCart，带事件对象阻止冒泡 + 严格防抖
+const addToCart = async (event) => {
+  if (event) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
   if (!product.value) return
+  if (adding.value) {
+    console.log('重复请求被阻止')
+    return
+  }
   adding.value = true
+  await nextTick()  // 确保按钮禁用样式立即生效
   try {
     const res = await axios.post(`${BASE_URL}/cart/add`, null, {
       params: { productId: product.value.id, quantity: quantity.value },
       withCredentials: true
     })
     if (res.data.code === 200) {
-      alert('已加入购物车')
+      console.log('已加入购物车')
+      // 可选：轻提示，但不使用 alert
     } else {
-      alert(res.data.msg || '加入失败')
+      console.error(res.data.msg)
     }
   } catch (error) {
-    alert('网络错误')
+    console.error('网络错误')
   } finally {
-    adding.value = false
+    setTimeout(() => {
+      adding.value = false
+    }, 1000)  // 1秒内禁止重复点击
   }
 }
 
@@ -142,7 +154,6 @@ const buyNow = async () => {
   if (!product.value) return
   buying.value = true
   try {
-    // 先加入购物车（覆盖数量）再跳转结算
     await axios.post(`${BASE_URL}/cart/add`, null, {
       params: { productId: product.value.id, quantity: quantity.value },
       withCredentials: true
@@ -167,6 +178,8 @@ onMounted(() => {
   fetchProductDetail()
 })
 </script>
+
+
 
 <style scoped>
 .product-detail-wrapper {

@@ -125,6 +125,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'   // 添加 useRouter 导入
 import axios from 'axios'
 
 const BASE_URL = 'http://localhost:8080'
@@ -158,6 +159,8 @@ const auditSubmitting = ref(false)
 
 const message = ref('')
 const messageType = ref('success')
+const router = useRouter()   // 创建 router 实例
+
 const showMessage = (msg, type = 'error') => {
   message.value = msg
   messageType.value = type
@@ -203,7 +206,6 @@ const statusClass = (status) => {
 const openShipModal = (order) => {
   shipOrder.value = order
   shipModalVisible.value = true
-  // 清空输入框（下次打开时）
   setTimeout(() => {
     if (deliveryCompanyInput.value) deliveryCompanyInput.value.value = ''
     if (deliveryNoInput.value) deliveryNoInput.value.value = ''
@@ -246,7 +248,7 @@ const submitShip = async () => {
   }
 }
 
-// 退货审核（需要后端提供退货申请列表，但这里直接使用订单中的 refundId）
+// 退货审核
 const openRefundAuditModal = (order) => {
   if (!order.refundId) {
     showMessage('未找到退货申请ID，无法审核', 'error')
@@ -290,11 +292,16 @@ const submitRefundAudit = async () => {
   }
 }
 
-const viewDetail = (orderNo) => alert(`订单详情开发中，订单号：${orderNo}`)
+// 跳转到订单详情页
+const viewDetail = (orderNo) => {
+  router.push(`/order/detail/${orderNo}`)
+}
+
 const changePage = (page) => { currentPage.value = page; fetchOrders() }
 
 onMounted(() => { fetchOrders() })
 </script>
+
 
 <style scoped>
 /* 全局容器 */

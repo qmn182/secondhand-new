@@ -1,4 +1,4 @@
-// service/OrderService.java (完整替换)
+// service/OrderService.java (完整替换，仅将 convertToVO 改为 public)
 package com.example.demo.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -309,8 +309,9 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
 
     /**
      * 转换 Order 实体为 OrderVO（包含订单商品明细）
+     * 访问修饰符已从 private 改为 public，以便 OrderController 调用
      */
-    private OrderVO convertToVO(Order order) {
+    public OrderVO convertToVO(Order order) {
         OrderVO vo = new OrderVO();
         BeanUtils.copyProperties(order, vo);
 
