@@ -356,6 +356,15 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
             itemVOs.add(itemVO);
         }
         vo.setItems(itemVOs);
+        // 查询该订单是否有待审核的退货申请（status=1）
+        List<Refund> refunds = refundService.list(
+            new LambdaQueryWrapper<Refund>()
+                .eq(Refund::getOrderId, order.getId())
+                .eq(Refund::getStatus, 1)   // 待审核
+        );
+        if (!refunds.isEmpty()) {
+            vo.setRefundId(refunds.get(0).getId());  // 需要 OrderVO 有 refundId 字段
+        }
         return vo;
     }
     /**

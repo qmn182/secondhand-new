@@ -28,6 +28,10 @@
         <router-link to="/publish" class="nav-link" active-class="active">发布商品</router-link>
         <router-link to="/my-products" class="nav-link" active-class="active">我的商品</router-link>
         <router-link to="/cart" class="nav-link" active-class="active">购物车</router-link>
+        <!-- 买家显示 -->
+        <router-link v-if="user && user.role !== 2" to="/buyer/orders" class="nav-link">我的订单</router-link>
+        <!-- 商家显示 -->
+        <router-link v-if="user && user.role === 2" to="/merchant/orders" class="nav-link">订单管理</router-link>
         <router-link to="/wallet" class="nav-link" active-class="active">钱包</router-link>
         <router-link to="/profile" class="nav-link" active-class="active">个人中心</router-link>
       </div>

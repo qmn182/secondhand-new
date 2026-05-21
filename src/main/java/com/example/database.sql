@@ -346,3 +346,5 @@ CREATE TABLE `buyer_evaluation` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 ALTER TABLE `user` ADD COLUMN `buyer_rating` DECIMAL(2,1) DEFAULT 0.0 COMMENT '买家平均评分';
+
+ALTER TABLE `refund` ADD COLUMN `remark` VARCHAR(255) DEFAULT NULL COMMENT '备注（拒绝理由等）';

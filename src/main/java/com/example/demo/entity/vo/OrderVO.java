@@ -22,4 +22,5 @@ public class OrderVO {
     private LocalDateTime deliveryTime;
     private LocalDateTime confirmTime;
     private List<OrderItemVO> items;
+    private Long refundId;  // 关联的退货申请ID
 }
