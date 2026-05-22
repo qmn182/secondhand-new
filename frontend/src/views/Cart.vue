@@ -102,11 +102,14 @@ const finalPrice = computed(() => {
 // 兼容旧模板的总价（保留，但不必须）
 const totalPrice = computed(() => finalPrice.value)
 
+// --- 修改开始：使用 sellerId 而不是 userId 判断是否为自己发布的商品 ---
 // 购物车中是否包含自己发布的商品
 const hasOwnProduct = computed(() => {
   if (!user.value) return false
-  return cartItems.value.some(item => item.userId === user.value.id)
+  // 注意：需要后端返回 sellerId 字段（商品发布者ID）
+  return cartItems.value.some(item => item.sellerId === user.value.id)
 })
+// --- 修改结束 ---
 
 const showMessage = (msg, type = 'error') => {
   message.value = msg

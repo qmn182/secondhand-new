@@ -38,6 +38,16 @@ public class CartService extends ServiceImpl<CartMapper, Cart> {
         addCartCache.put(key, now);
         // ===== 修改结束 =====
 
+        // --- 修改开始：检查是否购买自己的商品 ---
+        Product product = productService.getById(productId);
+        if (product == null) {
+            throw new RuntimeException("商品不存在");
+        }
+        if (product.getUserId().equals(userId)) {
+            throw new RuntimeException("不能购买自己发布的商品");
+        }
+        // --- 修改结束 ---
+
         // 查询已有购物车项
         Cart existing = this.getOne(new LambdaQueryWrapper<Cart>()
                 .eq(Cart::getUserId, userId)
