@@ -1,21 +1,17 @@
 package com.example.demo.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo.common.Result;
+import com.example.demo.entity.Order;
 import com.example.demo.entity.User;
+import com.example.demo.entity.vo.OrderVO;
 import com.example.demo.service.OrderService;
 import jakarta.servlet.http.HttpSession;
-import com.example.demo.entity.vo.OrderVO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.GetMapping;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-
 
 @RestController
 @RequestMapping("/order")
@@ -70,10 +66,44 @@ public class OrderController {
         }
     }
 
+    // ===== 新增订单详情接口开始 =====
     /**
-     * 买家订单列表
-     * GET /order/user/orders?page=1&size=10&status=2
+     * 获取订单详情（支持买家、卖家、管理员查看）
+     * GET /order/detail/{orderNo}
      */
+    @GetMapping("/detail/{orderNo}")
+    public Result getOrderDetail(@PathVariable String orderNo, HttpSession session) {
+        try {
+            User user = (User) session.getAttribute("user");
+            if (user == null) {
+                return Result.fail("请先登录");
+            }
+            // 查询订单
+            Order order = orderService.getOne(new LambdaQueryWrapper<Order>().eq(Order::getOrderNo, orderNo));
+            if (order == null) {
+                return Result.fail("订单不存在");
+            }
+            // 权限校验：只有买家、卖家或管理员可查看
+            Long sellerId = orderService.getSellerIdByOrder(order.getId());
+            if (!order.getUserId().equals(user.getId()) && !sellerId.equals(user.getId()) && user.getRole() != 3) {
+                return Result.fail("无权限查看此订单");
+            }
+            // 转换为 VO（包含商品明细）—— convertToVO 已改为 public
+            OrderVO vo = orderService.convertToVO(order);
+            // 补充物流信息（如果已发货）—— 如果 OrderVO 没有这两个字段，请注释掉
+            if (order.getDeliveryCompany() != null) {
+                vo.setDeliveryCompany(order.getDeliveryCompany());
+                vo.setDeliveryNo(order.getDeliveryNo());
+            }
+            return Result.success(vo);
+        } catch (Exception e) {
+            e.printStackTrace(); // 打印详细错误到控制台
+            return Result.fail("服务器内部错误：" + e.getMessage());
+        }
+    }
+    // ===== 新增订单详情接口结束 =====
+
+    // 以下方法保持不变（买家订单列表、商家订单列表、退货申请等）
     @GetMapping("/user/orders")
     public Result getUserOrders(@RequestParam(defaultValue = "1") Integer page,
                                 @RequestParam(defaultValue = "10") Integer size,
@@ -100,9 +130,6 @@ public class OrderController {
         return Result.success(orders);
     }
 
-    /**
-     * 买家申请退货
-     */
     @PostMapping("/refund/apply")
     public Result applyRefund(@RequestParam Long orderId,
                             @RequestParam Long orderItemId,
@@ -121,9 +148,6 @@ public class OrderController {
         }
     }
 
-    /**
-     * 商家审核退货
-     */
     @PostMapping("/refund/audit")
     public Result auditRefund(@RequestParam Long refundId,
                             @RequestParam Boolean approved,

@@ -40,13 +40,20 @@
           </div>
           <div class="actions">
             <div class="quantity">
-              <button @click="decreaseQty">-</button>
-              <input type="number" v-model.number="quantity" min="1" :max="product.stock" />
-              <button @click="increaseQty">+</button>
+              <button @click="decreaseQty" :disabled="isOwnProduct">-</button>
+              <input type="number" v-model.number="quantity" min="1" :max="product.stock" :disabled="isOwnProduct" />
+              <button @click="increaseQty" :disabled="isOwnProduct">+</button>
             </div>
-            <button class="btn-cart" @click="addToCart" :disabled="adding">加入购物车</button>
-            <button class="btn-buy" @click="buyNow" :disabled="buying">立即购买</button>
+            <!-- 修改开始：添加 isOwnProduct 禁用条件 -->
+            <button class="btn-cart" @click="addToCart($event)" :disabled="adding || isOwnProduct">加入购物车</button>
+            <button class="btn-buy" @click="buyNow" :disabled="buying || isOwnProduct">立即购买</button>
+            <!-- 修改结束 -->
           </div>
+          <!-- 修改开始：警告信息 -->
+          <div v-if="isOwnProduct" class="warning-message">
+            ⚠️ 您不能购买自己发布的商品
+          </div>
+          <!-- 修改结束 -->
           <div class="description">
             <h3>商品描述</h3>
             <p>{{ product.description || '暂无描述' }}</p>
@@ -63,10 +70,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import ProductEvaluations from './ProductEvaluations.vue'  // 确保路径正确
+import ProductEvaluations from './ProductEvaluations.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -79,7 +86,10 @@ const quantity = ref(1)
 const adding = ref(false)
 const buying = ref(false)
 
-// 图片处理：支持 imageUrl 或 images JSON 数组
+// 修改开始：添加当前用户状态
+const user = ref(null)
+// 修改结束
+
 const imageList = computed(() => {
   if (!product.value) return []
   if (product.value.images) {
@@ -92,6 +102,12 @@ const imageList = computed(() => {
   return ['/placeholder.png']
 })
 const currentImage = ref('')
+
+// 修改开始：计算属性判断是否为自营商品
+const isOwnProduct = computed(() => {
+  return user.value && product.value && user.value.id === product.value.userId
+})
+// 修改结束
 
 const fetchProductDetail = async () => {
   loading.value = true
@@ -111,6 +127,20 @@ const fetchProductDetail = async () => {
   }
 }
 
+// 修改开始：获取当前登录用户
+const fetchCurrentUser = async () => {
+  try {
+    const res = await axios.get(`${BASE_URL}/user/current`, { withCredentials: true })
+    if (res.data.code === 200) {
+      user.value = res.data.data
+    }
+  } catch (error) {
+    console.error('获取用户信息失败', error)
+    user.value = null
+  }
+}
+// 修改结束
+
 const decreaseQty = () => {
   if (quantity.value > 1) quantity.value--
 }
@@ -118,23 +148,31 @@ const increaseQty = () => {
   if (product.value && quantity.value < product.value.stock) quantity.value++
 }
 
-const addToCart = async () => {
+const addToCart = async (event) => {
+  if (event) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
   if (!product.value) return
+  if (adding.value) return
   adding.value = true
+  await nextTick()
   try {
     const res = await axios.post(`${BASE_URL}/cart/add`, null, {
       params: { productId: product.value.id, quantity: quantity.value },
       withCredentials: true
     })
     if (res.data.code === 200) {
-      alert('已加入购物车')
+      console.log('已加入购物车')
     } else {
-      alert(res.data.msg || '加入失败')
+      console.error(res.data.msg)
     }
   } catch (error) {
-    alert('网络错误')
+    console.error('网络错误')
   } finally {
-    adding.value = false
+    setTimeout(() => {
+      adding.value = false
+    }, 1000)
   }
 }
 
@@ -142,7 +180,6 @@ const buyNow = async () => {
   if (!product.value) return
   buying.value = true
   try {
-    // 先加入购物车（覆盖数量）再跳转结算
     await axios.post(`${BASE_URL}/cart/add`, null, {
       params: { productId: product.value.id, quantity: quantity.value },
       withCredentials: true
@@ -164,6 +201,9 @@ const goToShop = () => {
 }
 
 onMounted(() => {
+  // 修改开始：并行获取用户信息和商品详情
+  fetchCurrentUser()
+  // 修改结束
   fetchProductDetail()
 })
 </script>
@@ -311,6 +351,18 @@ onMounted(() => {
 .btn-buy:hover {
   background: #6366f1;
 }
+/* 修改开始：警告消息样式 */
+.warning-message {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 10px 16px;
+  border-radius: 40px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  text-align: center;
+}
+/* 修改结束 */
 .description {
   margin-top: 24px;
   border-top: 1px solid #e2e8f0;

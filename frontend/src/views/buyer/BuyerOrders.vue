@@ -99,8 +99,15 @@
 </template>
 
 <script setup>
+// ===== 修改开始：导入 useRouter =====
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'   // 新增导入
+// ===== 修改结束 =====
 import axios from 'axios'
+
+// ===== 修改开始：创建 router 实例 =====
+const router = useRouter()
+// ===== 修改结束 =====
 
 const BASE_URL = 'http://localhost:8080'
 
@@ -256,7 +263,12 @@ const submitRefund = async () => {
   }
 }
 
-const viewDetail = (orderNo) => alert(`订单详情：${orderNo}`)
+// ===== 修改开始：修改 viewDetail 方法，跳转到订单详情页 =====
+const viewDetail = (orderNo) => {
+  router.push(`/order/detail/${orderNo}`)
+}
+// ===== 修改结束 =====
+
 const changePage = (page) => { currentPage.value = page; fetchOrders() }
 
 onMounted(() => {

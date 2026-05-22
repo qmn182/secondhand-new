@@ -63,6 +63,18 @@ const router = createRouter({
       path: '/product/edit/:id',
       name: 'edit-product',
       component: () => import('@/views/product/EditProduct.vue')
+    },
+    {
+      path: '/order/detail/:orderNo',
+      name: 'order-detail',
+      component: () => import('@/views/order/OrderDetail.vue')
+    },
+    // 在 /admin/users 下方添加
+    {
+      path: '/admin/product-audit',
+      name: 'product-audit',
+      component: () => import('@/views/admin/ProductAudit.vue'),
+      meta: { requiresAuth: true, roles: [3] }  // 仅管理员可访问
     }
     
   ]

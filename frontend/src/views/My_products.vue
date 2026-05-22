@@ -5,7 +5,14 @@
         <div class="page-title">我的商品</div>
       </div>
 
+      <!-- ===== 修改开始：新增“待审核”标签 ===== -->
       <div class="tabs">
+        <button 
+          :class="{ active: activeTab === 'pending' }" 
+          @click="activeTab = 'pending'"
+        >
+          ⏳ 待审核
+        </button>
         <button 
           :class="{ active: activeTab === 'selling' }" 
           @click="activeTab = 'selling'"
@@ -25,6 +32,7 @@
           📌 已下架
         </button>
       </div>
+      <!-- ===== 修改结束 ===== -->
 
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div> 加载中...
@@ -45,10 +53,15 @@
               <p class="sold">❤️ 销量 {{ product.sold || 0 }}</p>
             </div>
             <div class="product-actions">
-              <button v-if="product.status === 1" class="btn-off" @click="offShelf(product.id)">下架</button>
-              <button v-if="product.status === 2" class="btn-on" @click="onShelf(product.id)">上架</button>
-              <button class="btn-edit" @click="editProduct(product.id)">编辑</button>
-              <button class="btn-delete" @click="deleteProduct(product.id)">删除</button>
+              <!-- ===== 修改开始：待审核商品显示“审核中”标签，不显示操作按钮 ===== -->
+              <span v-if="product.status === 0" class="status-pending-label">审核中</span>
+              <template v-else>
+                <button v-if="product.status === 1" class="btn-off" @click="offShelf(product.id)">下架</button>
+                <button v-if="product.status === 2" class="btn-on" @click="onShelf(product.id)">上架</button>
+                <button class="btn-edit" @click="editProduct(product.id)">编辑</button>
+                <button class="btn-delete" @click="deleteProduct(product.id)">删除</button>
+              </template>
+              <!-- ===== 修改结束 ===== -->
             </div>
           </div>
         </div>
@@ -71,7 +84,9 @@ import axios from 'axios'
 const router = useRouter()
 const BASE_URL = 'http://localhost:8080'
 
+// ===== 修改开始：activeTab 默认值可根据需要调整，但初始仍设为 'selling' =====
 const activeTab = ref('selling')
+// ===== 修改结束 =====
 const productList = ref([])
 const loading = ref(false)
 const message = ref('')
@@ -93,17 +108,20 @@ const getProductImage = (product) => {
       if (arr.length) return arr[0]
     } catch (e) {}
   }
-  return '/placeholder.png'   // 修改默认图片路径
+  return '/placeholder.png'
 }
 
+// ===== 修改开始：fetchProducts 增加对 'pending' 状态的处理 =====
 const fetchProducts = async (status) => {
   loading.value = true
   try {
-    let statusCode = 1
-    if (status === 'selling') statusCode = 1
-    else if (status === 'sold') statusCode = 3
-    else if (status === 'off') statusCode = 2
-    const params = { page: 1, size: 20, status: statusCode }
+    let statusCode = null
+    if (status === 'pending') statusCode = 0   // 待审核
+    else if (status === 'selling') statusCode = 1   // 上架中
+    else if (status === 'sold') statusCode = 3      // 已售罄
+    else if (status === 'off') statusCode = 2       // 已下架
+    const params = { page: 1, size: 20 }
+    if (statusCode !== null) params.status = statusCode
     const res = await axios.get(`${BASE_URL}/product/my-list`, { 
       params,
       withCredentials: true
@@ -120,6 +138,7 @@ const fetchProducts = async (status) => {
     loading.value = false
   }
 }
+// ===== 修改结束 =====
 
 const offShelf = async (id) => {
   if (confirm('确认下架该商品？')) {
@@ -143,7 +162,6 @@ const onShelf = async (id) => {
   }
 }
 
-/*下述代码已修改--2026/05/20/22:39-gq */
 const editProduct = (id) => {
   router.push(`/product/edit/${id}`)
 }
@@ -168,7 +186,6 @@ onMounted(() => {
   fetchProducts(activeTab.value)
 })
 </script>
-
 
 <style scoped>
 /* 与首页完全统一的风格 */
@@ -204,7 +221,7 @@ onMounted(() => {
   display: inline-block;
 }
 
-/* 标签页（与之前的风格稍有调整，但保持整体和谐） */
+/* 标签页（包含新增的待审核） */
 .tabs {
   display: flex;
   gap: 12px;
@@ -340,6 +357,17 @@ onMounted(() => {
 .btn-delete:hover {
   background: #dc2626;
 }
+
+/* ===== 修改开始：新增待审核标签样式 ===== */
+.status-pending-label {
+  background: #f59e0b;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 40px;
+  font-size: 12px;
+  font-weight: 600;
+}
+/* ===== 修改结束 ===== */
 
 /* 加载和空状态 */
 .loading-state {
