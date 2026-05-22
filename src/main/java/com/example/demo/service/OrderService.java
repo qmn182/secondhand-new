@@ -231,6 +231,16 @@ public class OrderService extends ServiceImpl<OrderMapper, Order> {
         order.setEscrowStatus(3);  // 已结算
         order.setConfirmTime(LocalDateTime.now());
         this.updateById(order);
+
+        // --- 修改开始：更新订单中所有商品的明细状态为“待评价”(2) ---
+        List<OrderItem> items = orderItemService.list(new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, order.getId()));
+        if (!items.isEmpty()) {
+            for (OrderItem item : items) {
+                item.setStatus(2); // 2 表示待评价
+                orderItemService.updateById(item);
+            }
+        }
+        // --- 修改结束 ---
     }
     /**
      * 买家查询自己的订单列表（分页 + 状态筛选）

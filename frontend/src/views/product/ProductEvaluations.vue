@@ -48,9 +48,8 @@
       </div>
     </div>
 
-    <!-- ===== 修改开始：买家评价表单（仅当有可评价订单时才显示） ===== -->
-    <!-- 原条件：v-if="canEvaluate"（仅登录） 改为：v-if="canEvaluateForProduct"（登录且有可评价订单） -->
-    <div v-if="canEvaluateForProduct" class="evaluate-section">
+    <!-- 买家评价表单（登录用户可见，后端会校验是否有权限） -->
+    <div v-if="canEvaluate" class="evaluate-section">
       <h3 class="section-title">发表评价</h3>
       <div class="form-row">
         <div class="form-group half">
@@ -82,11 +81,6 @@
         {{ submitting ? '提交中...' : '提交评价' }}
       </button>
     </div>
-    <!-- 如果没有可评价订单且用户已登录，可显示提示（可选） -->
-    <div v-else-if="currentUser && !canEvaluateForProduct" class="info-message">
-      <p>您尚未购买此商品或已完成评价，无法发表新评价。</p>
-    </div>
-    <!-- ===== 修改结束 ===== -->
   </div>
 </template>
 
@@ -117,12 +111,8 @@ const imageFiles = ref([])
 const imagePreviews = ref([])
 const submitting = ref(false)
 
-// ===== 修改开始：新增变量：是否有可评价订单 =====
-const canEvaluateForProduct = ref(false)
-// ===== 修改结束 =====
-
-// 是否可评价（仅登录）—— 原 canEvaluate 保留但不再用于表单显示
-// const canEvaluate = computed(() => !!currentUser.value)  // 不再需要
+// 评价表单显示条件：登录即可（后端会校验权限）
+const canEvaluate = computed(() => !!currentUser.value)
 
 // 获取当前用户
 const fetchCurrentUser = async () => {
@@ -131,40 +121,6 @@ const fetchCurrentUser = async () => {
     if (res.data.code === 200) currentUser.value = res.data.data
   } catch (err) { console.error(err) }
 }
-
-// ===== 修改开始：辅助函数：获取可评价的订单ID，并更新 canEvaluateForProduct =====
-const checkEvaluableOrder = async () => {
-  if (!currentUser.value) {
-    canEvaluateForProduct.value = false
-    return
-  }
-  try {
-    const res = await axios.get(`${BASE_URL}/order/user/orders`, {
-      params: { page: 1, size: 100, status: 4 },  // 已完成订单
-      withCredentials: true
-    })
-    if (res.data.code !== 200) {
-      canEvaluateForProduct.value = false
-      return
-    }
-    const orders = res.data.data?.records || []
-    let hasEvaluable = false
-    for (const order of orders) {
-      if (order.items && order.items.length) {
-        const item = order.items.find(i => i.productId === props.productId && !i.evaluated)
-        if (item) {
-          hasEvaluable = true
-          break
-        }
-      }
-    }
-    canEvaluateForProduct.value = hasEvaluable
-  } catch (err) {
-    console.error(err)
-    canEvaluateForProduct.value = false
-  }
-}
-// ===== 修改结束 =====
 
 // 加载评价列表
 const fetchEvaluations = async () => {
@@ -231,64 +187,23 @@ const removeImage = (idx) => {
   imageFiles.value.splice(idx, 1)
 }
 
-// ===== 修改开始：提交评价（现在 canEvaluateForProduct 已保证有 orderId，无需再调用 getEvaluableOrderId） =====
-// 为了简化，我们复用 checkEvaluableOrder 中已经查到的 orderId，但为了代码清晰，我们可以在提交时再查一次（或者存储 orderId）
-// 这里为了性能，在 checkEvaluableOrder 时顺便存储可评价的订单ID（第一个）
-let cachedOrderId = null
-
-const checkEvaluableOrderWithId = async () => {
-  if (!currentUser.value) {
-    canEvaluateForProduct.value = false
-    cachedOrderId = null
-    return
-  }
-  try {
-    const res = await axios.get(`${BASE_URL}/order/user/orders`, {
-      params: { page: 1, size: 100, status: 4 },
-      withCredentials: true
-    })
-    if (res.data.code !== 200) {
-      canEvaluateForProduct.value = false
-      cachedOrderId = null
-      return
-    }
-    const orders = res.data.data?.records || []
-    let foundOrderId = null
-    for (const order of orders) {
-      if (order.items && order.items.length) {
-        const item = order.items.find(i => i.productId === props.productId && !i.evaluated)
-        if (item) {
-          foundOrderId = order.id
-          break
-        }
-      }
-    }
-    canEvaluateForProduct.value = !!foundOrderId
-    cachedOrderId = foundOrderId
-  } catch (err) {
-    console.error(err)
-    canEvaluateForProduct.value = false
-    cachedOrderId = null
-  }
-}
-
+// ===== 提交评价（修改开始） =====
+// 修改前：使用 JSON 请求体
+// 修改后：使用 params（适配后端 @RequestParam）
 const submitEvaluation = async () => {
   if (!newComment.value.trim()) {
     alert('请填写评价内容')
     return
   }
-  // 确保有可评价订单ID
-  if (!cachedOrderId) {
-    alert('您还没有购买此商品，或已完成评价，无法评价')
-    return
-  }
   submitting.value = true
   try {
-    // 上传图片（如果有）
+    // 上传图片
     let imageUrls = []
     if (imageFiles.value.length) {
       const formData = new FormData()
-      imageFiles.value.forEach(file => formData.append('files', file))
+      for (let file of imageFiles.value) {
+        formData.append('files', file)
+      }
       const uploadRes = await axios.post(`${BASE_URL}/product/upload`, formData, {
         withCredentials: true,
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -296,25 +211,30 @@ const submitEvaluation = async () => {
       if (uploadRes.data.code !== 200) throw new Error('图片上传失败')
       imageUrls = uploadRes.data.data
     }
-    // 提交评价
-    const params = {
-      orderId: cachedOrderId,
-      productId: props.productId,
-      rating: newRating.value,
-      comment: newComment.value,
-      images: imageUrls.length ? JSON.stringify(imageUrls) : ''
+
+    // 提交评价（使用 params）
+    const res = await axios.post(`${BASE_URL}/evaluation/product`, null, {
+      params: {
+        productId: props.productId,
+        rating: newRating.value,
+        comment: newComment.value,
+        images: imageUrls.length ? JSON.stringify(imageUrls) : ''
+      },
+      withCredentials: true
+    })
+
+    if (res.data.code === 200) {
+      alert('评价成功')
+      // 清空表单
+      newComment.value = ''
+      newRating.value = 5
+      imageFiles.value = []
+      imagePreviews.value = []
+      // 刷新评价列表
+      fetchEvaluations()
+    } else {
+      alert(res.data.msg || '提交失败')
     }
-    await axios.post(`${BASE_URL}/evaluation/product`, null, { params, withCredentials: true })
-    alert('评价成功')
-    // 清空表单
-    newComment.value = ''
-    newRating.value = 5
-    imageFiles.value = []
-    imagePreviews.value = []
-    // 重新检查是否还有可评价订单（可能该商品只有这一个订单，评价后 should 变为 false）
-    await checkEvaluableOrderWithId()
-    // 刷新评价列表
-    fetchEvaluations()
   } catch (err) {
     console.error(err)
     alert(err.response?.data?.msg || '提交失败')
@@ -322,19 +242,15 @@ const submitEvaluation = async () => {
     submitting.value = false
   }
 }
-// ===== 修改结束 =====
+// ===== 提交评价（修改结束） =====
 
 const formatDate = (dateStr) => dateStr ? new Date(dateStr).toLocaleString() : ''
 
 onMounted(() => {
   fetchCurrentUser()
-  // 等待用户信息加载后再检查订单
-  // 因为 fetchCurrentUser 是异步，需要在其完成后再执行
-  // 简单写法：在 fetchCurrentUser 内部调用 checkEvaluableOrderWithId
-  // 修改 fetchCurrentUser：
+  fetchEvaluations()
 })
 </script>
-
 
 <style scoped>
 /* ========== 与商品详情页完全统一的风格 ========== */

@@ -37,8 +37,10 @@ public class EvaluationController {
     /**
      * 评价商品
      */
+    // --- 修改开始：orderId 改为非必传 ---
     @PostMapping("/product")
-    public Result evaluateProduct(@RequestParam Long orderId,
+    public Result evaluateProduct(@RequestParam(required = false) Long orderId,
+    // --- 修改结束 ---
                                   @RequestParam Long productId,
                                   @RequestParam Integer rating,
                                   @RequestParam(required = false) String comment,
@@ -47,6 +49,21 @@ public class EvaluationController {
         User user = (User) session.getAttribute("user");
         if (user == null) return Result.fail("请先登录");
         if (rating < 1 || rating > 5) return Result.fail("评分必须是1-5");
+
+        // --- 修改开始：如果未传 orderId，则自动查找一个可评价订单 ---
+        if (orderId == null) {
+            Order order = orderService.getOne(new LambdaQueryWrapper<Order>()
+                    .eq(Order::getUserId, user.getId())
+                    .eq(Order::getStatus, 4) // 状态为“已完成”
+                    .orderByDesc(Order::getCreateTime) // 取最新订单
+                    .last("LIMIT 1")); // 限制只取一条
+            if (order == null) {
+                return Result.fail("未找到可评价的订单");
+            }
+            orderId = order.getId();
+        }
+        // --- 修改结束 ---
+
         try {
             evaluationService.evaluateProduct(orderId, productId, user.getId(), rating, comment, images);
             return Result.success("评价成功");
