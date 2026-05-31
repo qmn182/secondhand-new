@@ -1,16 +1,16 @@
 -- ======================================================
 -- 二手交易平台数据库初始化脚本（完整版）
--- 数据库名: secondhand
+-- 数据库名: 2023011275
 -- 字符集: utf8mb4
 -- 适用环境: MySQL 8.0+
 -- ======================================================
 
 -- 创建数据库（如果不存在）
-CREATE DATABASE IF NOT EXISTS `secondhand` 
+CREATE DATABASE IF NOT EXISTS `2023011275` 
 DEFAULT CHARACTER SET utf8mb4 
 COLLATE utf8mb4_unicode_ci;
 
-USE `secondhand`;
+USE `2023011275`;
 
 -- ======================================================
 -- 1. 用户表 (user)
@@ -107,7 +107,7 @@ CREATE TABLE `orders` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单表';
 
 -- ======================================================
--- 5. 订单商品明细表 (order_item)
+-- 5. 订单商品明细表 (s)
 -- ======================================================
 DROP TABLE IF EXISTS `order_item`;
 CREATE TABLE `order_item` (
